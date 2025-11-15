@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children, allowedRole }: ProtectedRouteProps) => {
-  const { user, role, loading } = useAuth();
+  const { user, role, isApprovedAdmin, loading } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -23,9 +23,12 @@ export const ProtectedRoute = ({ children, allowedRole }: ProtectedRouteProps) =
         } else if (role === "admin") {
           navigate("/admin/dashboard", { replace: true });
         }
+      } else if (role === "admin" && allowedRole === "admin" && isApprovedAdmin === false) {
+        // Admin but not approved, redirect to login
+        navigate("/login", { replace: true });
       }
     }
-  }, [user, role, loading, allowedRole, navigate]);
+  }, [user, role, isApprovedAdmin, loading, allowedRole, navigate]);
 
   // Add timeout to prevent infinite loading
   useEffect(() => {
@@ -57,6 +60,10 @@ export const ProtectedRoute = ({ children, allowedRole }: ProtectedRouteProps) =
 
   // If user is authenticated and has correct role, show content
   if (role === allowedRole) {
+    // For admin routes, also check approval status
+    if (allowedRole === "admin" && isApprovedAdmin === false) {
+      return null; // Redirect will handle it
+    }
     return <>{children}</>;
   }
 

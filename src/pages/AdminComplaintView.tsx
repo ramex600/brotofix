@@ -82,10 +82,10 @@ const AdminComplaintView = () => {
         admin_notes: data.admin_notes,
         created_at: data.created_at,
         updated_at: data.updated_at,
-        student_name: profileData?.name || "Unknown",
+        student_name: profileData?.name || "Unknown Student",
         student_id_display: profileData?.student_id || "N/A",
         course: profileData?.course || "N/A",
-        student_email: `${profileData?.student_id}@brototype.student` || "N/A",
+        student_email: profileData?.email || "N/A",
       };
 
       setComplaint(formatted);

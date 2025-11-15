@@ -9,6 +9,7 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   role: UserRole;
+  isApprovedAdmin: boolean | null;
   loading: boolean;
   signInStudent: (name: string, password: string) => Promise<{ error: any }>;
   signInAdmin: (email: string, password: string) => Promise<{ error: any }>;
@@ -21,20 +22,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<UserRole>(null);
+  const [isApprovedAdmin, setIsApprovedAdmin] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchUserRole = async (userId: string) => {
     const { data, error } = await supabase
       .from("user_roles")
-      .select("role")
+      .select("role, approved")
       .eq("user_id", userId)
       .maybeSingle();
 
     if (error) {
       console.error("Error fetching role:", error);
-      return null;
+      return { role: null, approved: null };
     }
-    return data?.role || null;
+    
+    return { 
+      role: data?.role || null, 
+      approved: data?.role === 'admin' ? (data?.approved || false) : null 
+    };
   };
 
   useEffect(() => {
@@ -44,8 +50,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        const userRole = await fetchUserRole(session.user.id);
-        setRole(userRole);
+        const { role, approved } = await fetchUserRole(session.user.id);
+        setRole(role);
+        setIsApprovedAdmin(approved);
       }
       setLoading(false);
     });
@@ -59,10 +66,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (session?.user) {
           // Defer role fetching to avoid deadlock
           setTimeout(() => {
-            fetchUserRole(session.user.id).then(setRole);
+            fetchUserRole(session.user.id).then(({ role, approved }) => {
+              setRole(role);
+              setIsApprovedAdmin(approved);
+            });
           }, 0);
         } else {
           setRole(null);
+          setIsApprovedAdmin(null);
         }
         setLoading(false);
       }
@@ -133,20 +144,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // If sign in succeeds, check if admin is approved
     if (!signInError && signInData.user) {
-      // Call the secure function to assign admin role
+      // Call the secure function to assign admin role (if not already assigned)
       await supabase.rpc('assign_admin_role', { _user_id: signInData.user.id });
       
       // Check if admin is approved
-      const { data: roleData } = await supabase
+      const { data: roleData, error: roleError } = await supabase
         .from('user_roles')
         .select('approved')
         .eq('user_id', signInData.user.id)
         .eq('role', 'admin')
         .single();
       
-      if (!roleData?.approved) {
+      if (roleError || !roleData?.approved) {
         await supabase.auth.signOut();
-        return { error: { message: "Your admin account is pending approval. Please wait for an existing admin to approve your access." } };
+        return { error: { message: "Your admin account is pending approval. Please contact admin@brototype.com for access." } };
       }
       
       return { error: null };
@@ -164,27 +175,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       });
 
       if (signUpError) {
-        // If signup also fails with "already registered", try sign in one more time
+        // If signup also fails with "already registered", return invalid credentials
         if (signUpError.message?.includes("already registered")) {
-          const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-          
-          if (!retryError && retryData.user) {
-            await supabase.rpc('assign_admin_role', { _user_id: retryData.user.id });
-          }
-          return { error: retryError };
+          return { error: { message: "Invalid login credentials" } };
         }
         return { error: signUpError };
       }
 
-      // Assign admin role to new user
+      // Assign admin role to new user (will be unapproved by default)
       if (signUpData.user) {
         await supabase.rpc('assign_admin_role', { _user_id: signUpData.user.id });
+        
+        // Sign them out immediately as they need approval
+        await supabase.auth.signOut();
+        return { error: { message: "Admin account created successfully. Please wait for approval from an existing admin before logging in." } };
       }
 
-      return { error: null };
+      return { error: { message: "Failed to create admin account" } };
     }
 
     return { error: signInError };
@@ -195,6 +202,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setUser(null);
     setSession(null);
     setRole(null);
+    setIsApprovedAdmin(null);
     
     // Clear any cached data
     localStorage.removeItem('sb-iddbyjhwqxgpfwzomicv-auth-token');
@@ -210,6 +218,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         user,
         session,
         role,
+        isApprovedAdmin,
         loading,
         signInStudent,
         signInAdmin,
