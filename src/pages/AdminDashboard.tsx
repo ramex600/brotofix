@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import brototypelogo from "@/assets/brototype-logo.jpg";
 import { supabase } from "@/integrations/supabase/client";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { NotificationBell } from "@/components/NotificationBell";
 
 interface ComplaintWithStudent {
   id: string;
@@ -28,7 +29,7 @@ interface ComplaintWithStudent {
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
@@ -185,6 +186,7 @@ const AdminDashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <NotificationBell userId={user?.id} userRole="admin" />
             <ThemeToggle />
             <Button variant="outline" onClick={handleLogout}>
               <LogOut className="w-4 h-4 mr-2" />
