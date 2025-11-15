@@ -93,12 +93,12 @@ export type Database = {
           student_id: string
         }
         Insert: {
-          course: string
+          course?: string
           created_at?: string
           email?: string | null
           id: string
           name: string
-          student_id: string
+          student_id?: string
         }
         Update: {
           course?: string

@@ -10,7 +10,7 @@ interface AuthContextType {
   session: Session | null;
   role: UserRole;
   loading: boolean;
-  signInStudent: (email: string, name: string, studentId: string, course: string) => Promise<{ error: any }>;
+  signInStudent: (email: string, name: string, password: string) => Promise<{ error: any }>;
   signInAdmin: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
@@ -72,102 +72,40 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signInStudent = async (email: string, name: string, studentId: string, course: string) => {
-    // Password will be auto-generated based on student ID
-    const password = `student_${studentId}`;
-
+  const signInStudent = async (email: string, name: string, password: string) => {
     // Try to sign in first
     const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    // If sign in succeeds, ensure profile exists
+    // If sign in succeeds, return success
     if (!signInError && signInData.user) {
-      // Call the secure function to assign student role
-      await supabase.rpc('assign_student_role', { _user_id: signInData.user.id });
-      
-      // Check if profile exists, if not create it
-      const { data: existingProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', signInData.user.id)
-        .maybeSingle();
-      
-      if (!existingProfile) {
-        await supabase.from('profiles').insert({
-          id: signInData.user.id,
-          name,
-          student_id: studentId,
-          course,
-        });
-      }
-      
       return { error: null };
     }
 
-    // If sign in fails, try to sign up
-    if (signInError?.message?.includes("Invalid login credentials") || 
-        signInError?.message?.includes("Email not confirmed")) {
+    // If sign in fails (user doesn't exist), try to sign up automatically
+    if (signInError?.message?.includes("Invalid login credentials")) {
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             name,
-            student_id: studentId,
-            course,
+            is_student: true,
           },
           emailRedirectTo: `${window.location.origin}/student/dashboard`,
         },
       });
 
       if (signUpError) {
-        // If signup also fails with "already registered", try sign in one more time
-        if (signUpError.message?.includes("already registered")) {
-          const { data: retryData, error: retryError } = await supabase.auth.signInWithPassword({
-            email,
-            password,
-          });
-          
-          if (!retryError && retryData.user) {
-            await supabase.rpc('assign_student_role', { _user_id: retryData.user.id });
-            
-            // Check if profile exists, if not create it
-            const { data: existingProfile } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', retryData.user.id)
-              .maybeSingle();
-            
-            if (!existingProfile) {
-              await supabase.from('profiles').insert({
-                id: retryData.user.id,
-                name,
-                student_id: studentId,
-                course,
-              });
-            }
-          }
-          return { error: retryError };
-        }
+        console.error("Signup error:", signUpError);
         return { error: signUpError };
       }
 
-      // Create profile for new user
       if (signUpData.user) {
-        await supabase.rpc('assign_student_role', { _user_id: signUpData.user.id });
-        
-        // Insert profile directly
-        await supabase.from('profiles').insert({
-          id: signUpData.user.id,
-          name,
-          student_id: studentId,
-          course,
-        });
+        return { error: null };
       }
-
-      return { error: null };
     }
 
     return { error: signInError };

@@ -13,8 +13,7 @@ import brototypelogo from "@/assets/brototype-logo.jpg";
 const studentSchema = z.object({
   email: z.string().trim().email("Invalid email address"),
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(100),
-  studentId: z.string().trim().min(3, "Student ID must be at least 3 characters").max(50),
-  course: z.string().trim().min(2, "Course must be at least 2 characters").max(100),
+  password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 const adminSchema = z.object({
@@ -29,8 +28,7 @@ const Login = () => {
 
   const [studentEmail, setStudentEmail] = useState("");
   const [studentName, setStudentName] = useState("");
-  const [studentId, setStudentId] = useState("");
-  const [course, setCourse] = useState("");
+  const [studentPassword, setStudentPassword] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
   const [adminPassword, setAdminPassword] = useState("");
   const [studentLoading, setStudentLoading] = useState(false);
@@ -53,27 +51,25 @@ const Login = () => {
       const validated = studentSchema.parse({
         email: studentEmail,
         name: studentName,
-        studentId: studentId,
-        course: course,
+        password: studentPassword,
       });
 
       const { error } = await signInStudent(
         validated.email,
         validated.name,
-        validated.studentId,
-        validated.course
+        validated.password
       );
 
       if (error) {
         toast({
           variant: "destructive",
-          title: "Login Failed",
+          title: "Authentication Failed",
           description: error.message,
         });
       } else {
         toast({
           title: "Welcome!",
-          description: "Successfully logged in as student.",
+          description: "Successfully authenticated as student.",
         });
         navigate("/student/dashboard");
       }
@@ -179,31 +175,19 @@ const Login = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="student-id">Student ID *</Label>
+                    <Label htmlFor="student-password">Password *</Label>
                     <Input
-                      id="student-id"
-                      type="text"
-                      placeholder="Your student ID"
-                      value={studentId}
-                      onChange={(e) => setStudentId(e.target.value)}
+                      id="student-password"
+                      type="password"
+                      placeholder="Your password"
+                      value={studentPassword}
+                      onChange={(e) => setStudentPassword(e.target.value)}
                       required
-                      maxLength={50}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="student-course">Course *</Label>
-                    <Input
-                      id="student-course"
-                      type="text"
-                      placeholder="e.g., MERN Stack Development"
-                      value={course}
-                      onChange={(e) => setCourse(e.target.value)}
-                      required
-                      maxLength={100}
+                      minLength={6}
                     />
                   </div>
                   <Button type="submit" className="w-full" disabled={studentLoading}>
-                    {studentLoading ? "Logging in..." : "Login as Student"}
+                    {studentLoading ? "Processing..." : "Login / Sign Up"}
                   </Button>
                   <p className="text-xs text-muted-foreground text-center">
                     First time? Your account will be created automatically
