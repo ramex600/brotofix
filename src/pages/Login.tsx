@@ -1,4 +1,5 @@
 import { useState } from "react";
+import * as React from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -36,17 +37,19 @@ const Login = () => {
   const [adminLoading, setAdminLoading] = useState(false);
 
   // Redirect if already logged in
-  if (user && role) {
-    if (role === "student") {
-      navigate("/student/dashboard", {
-        replace: true
-      });
-    } else if (role === "admin") {
-      navigate("/admin/dashboard", {
-        replace: true
-      });
+  React.useEffect(() => {
+    if (user && role) {
+      if (role === "student") {
+        navigate("/student/dashboard", {
+          replace: true
+        });
+      } else if (role === "admin") {
+        navigate("/admin/dashboard", {
+          replace: true
+        });
+      }
     }
-  }
+  }, [user, role, navigate]);
   const handleStudentLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setStudentLoading(true);
