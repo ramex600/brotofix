@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { FixoBro } from "@/components/FixoBro";
+import { NotificationBell } from "@/components/NotificationBell";
 
 interface Complaint {
   id: string;
@@ -259,6 +260,7 @@ const StudentDashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <NotificationBell userId={user?.id} userRole="student" />
             <ThemeToggle />
             <Button variant="outline" onClick={handleLogout}>
               <LogOut className="w-4 h-4 mr-2" />
