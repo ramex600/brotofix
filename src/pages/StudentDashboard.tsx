@@ -36,6 +36,7 @@ const StudentDashboard = () => {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
+  const [showFixoGreeting, setShowFixoGreeting] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -102,6 +103,15 @@ const StudentDashboard = () => {
     };
 
     fetchData();
+
+    // Show Fixo Bro greeting on first login (check localStorage)
+    const hasSeenGreeting = localStorage.getItem('fixobro_greeting_shown');
+    if (!hasSeenGreeting) {
+      setTimeout(() => {
+        setShowFixoGreeting(true);
+        localStorage.setItem('fixobro_greeting_shown', 'true');
+      }, 1000);
+    }
 
     // Set up real-time subscription
     const channel = supabase
@@ -426,6 +436,38 @@ const StudentDashboard = () => {
 
       {/* Fixo Bro AI Assistant */}
       <FixoBro />
+      
+      {/* Fixo Bro Greeting Popup */}
+      {showFixoGreeting && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in">
+          <Card className="w-[90vw] md:w-96 shadow-2xl border-2 border-destructive/20 animate-scale-in">
+            <CardHeader className="bg-destructive text-destructive-foreground">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full bg-background flex items-center justify-center">
+                  <span className="text-2xl">🤖</span>
+                </div>
+                <div>
+                  <CardTitle>Meet Fixo Bro!</CardTitle>
+                  <CardDescription className="text-destructive-foreground/80">
+                    Your Tech Support Assistant
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6 pb-4">
+              <p className="mb-4 text-muted-foreground">
+                Hey, I'm Fixo Bro 👋. Having device issues? Just click the red button at the bottom right, and I'll help you troubleshoot!
+              </p>
+              <Button 
+                onClick={() => setShowFixoGreeting(false)}
+                className="w-full"
+              >
+                Got it, thanks!
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

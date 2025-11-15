@@ -112,16 +112,19 @@ export type Database = {
       }
       user_roles: {
         Row: {
+          approved: boolean | null
           id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
+          approved?: boolean | null
           id?: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
+          approved?: boolean | null
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
@@ -133,6 +136,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_admin: { Args: { _admin_user_id: string }; Returns: undefined }
       assign_admin_role: { Args: { _user_id: string }; Returns: undefined }
       assign_student_role: { Args: { _user_id: string }; Returns: undefined }
       has_role: {

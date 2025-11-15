@@ -12,6 +12,7 @@ import brototypelogo from "@/assets/brototype-logo.jpg";
 import { supabase } from "@/integrations/supabase/client";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationBell } from "@/components/NotificationBell";
+import { PendingAdmins } from "@/components/PendingAdmins";
 
 interface ComplaintWithStudent {
   id: string;
@@ -198,6 +199,11 @@ const AdminDashboard = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
+        {/* Pending Admin Approvals */}
+        <div className="mb-8">
+          <PendingAdmins />
+        </div>
+
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Card>
