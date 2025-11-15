@@ -13,6 +13,7 @@ import { FixoBro } from "@/components/FixoBro";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ProfileCompletionDialog } from "@/components/ProfileCompletionDialog";
 import { ProfileEditDialog } from "@/components/ProfileEditDialog";
+import LiveChatButton from "@/components/chat/LiveChatButton";
 
 interface Complaint {
   id: string;
@@ -505,6 +506,9 @@ const StudentDashboard = () => {
           </Card>
         </div>
       )}
+
+      {/* Live Chat Button */}
+      <LiveChatButton />
     </div>
   );
 };

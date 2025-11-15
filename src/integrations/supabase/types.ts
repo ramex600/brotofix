@@ -14,6 +14,88 @@ export type Database = {
   }
   public: {
     Tables: {
+      chat_messages: {
+        Row: {
+          created_at: string
+          file_url: string | null
+          id: string
+          message: string
+          message_type: Database["public"]["Enums"]["message_type"]
+          sender_id: string
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          message: string
+          message_type?: Database["public"]["Enums"]["message_type"]
+          sender_id: string
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          message?: string
+          message_type?: Database["public"]["Enums"]["message_type"]
+          sender_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_sessions: {
+        Row: {
+          admin_id: string | null
+          complaint_id: string | null
+          created_at: string
+          ended_at: string | null
+          id: string
+          started_at: string
+          status: Database["public"]["Enums"]["chat_status"]
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          admin_id?: string | null
+          complaint_id?: string | null
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          started_at?: string
+          status?: Database["public"]["Enums"]["chat_status"]
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          admin_id?: string | null
+          complaint_id?: string | null
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          started_at?: string
+          status?: Database["public"]["Enums"]["chat_status"]
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_sessions_complaint_id_fkey"
+            columns: ["complaint_id"]
+            isOneToOne: false
+            referencedRelation: "complaints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       complaints: {
         Row: {
           admin_notes: string | null
@@ -131,6 +213,41 @@ export type Database = {
         }
         Relationships: []
       }
+      webrtc_signals: {
+        Row: {
+          created_at: string
+          id: string
+          sender_id: string
+          session_id: string
+          signal_data: Json
+          signal_type: Database["public"]["Enums"]["signal_type"]
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          sender_id: string
+          session_id: string
+          signal_data: Json
+          signal_type: Database["public"]["Enums"]["signal_type"]
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          sender_id?: string
+          session_id?: string
+          signal_data?: Json
+          signal_type?: Database["public"]["Enums"]["signal_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webrtc_signals_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "chat_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -149,6 +266,9 @@ export type Database = {
     }
     Enums: {
       app_role: "student" | "admin"
+      chat_status: "waiting" | "active" | "ended"
+      message_type: "text" | "system" | "file"
+      signal_type: "offer" | "answer" | "ice-candidate"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -277,6 +397,9 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["student", "admin"],
+      chat_status: ["waiting", "active", "ended"],
+      message_type: ["text", "system", "file"],
+      signal_type: ["offer", "answer", "ice-candidate"],
     },
   },
 } as const

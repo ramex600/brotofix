@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationBell } from "@/components/NotificationBell";
 import { PendingAdmins } from "@/components/PendingAdmins";
+import AdminChatQueue from "@/components/chat/AdminChatQueue";
 
 interface ComplaintWithStudent {
   id: string;
@@ -203,6 +204,9 @@ const AdminDashboard = () => {
         <div className="mb-8">
           <PendingAdmins />
         </div>
+
+        {/* Live Chat Queue */}
+        <AdminChatQueue />
 
         {/* Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
