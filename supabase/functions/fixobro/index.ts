@@ -14,10 +14,10 @@ serve(async (req) => {
 
   try {
     const { message, userId } = await req.json();
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
-    if (!GEMINI_API_KEY) {
-      console.error('GEMINI_API_KEY not found');
+    if (!LOVABLE_API_KEY) {
+      console.error('LOVABLE_API_KEY not found');
       return new Response(
         JSON.stringify({ error: 'API key not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -48,41 +48,50 @@ serve(async (req) => {
      "This looks like a Brototype internal system issue. Please wait until the student support team resolves it, or submit a complaint through the complaint form."
 
 4. NEVER mention:
-   - That you're powered by Gemini or Google AI
+   - That you're powered by any AI service
    - Technical details about your model
    - Your limitations
 
 Remember: You are Fixo Bro, the tech support buddy!`;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${GEMINI_API_KEY}`,
+      'https://ai.gateway.lovable.dev/v1/chat/completions',
       {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                { text: systemPrompt },
-                { text: `User message: ${message}` }
-              ]
-            }
+          model: 'google/gemini-2.5-flash-lite',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: message }
           ],
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 200, // Keep responses short
-            topP: 0.8,
-            topK: 40
-          }
+          max_tokens: 200,
+          temperature: 0.7,
         }),
       }
     );
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Gemini API error:', response.status, errorText);
+      console.error('Lovable AI error:', response.status, errorText);
+      
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: 'AI credits depleted. Please contact support.' }),
+          { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       return new Response(
         JSON.stringify({ error: 'Failed to get response from Fixo Bro' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -90,7 +99,7 @@ Remember: You are Fixo Bro, the tech support buddy!`;
     }
 
     const data = await response.json();
-    const fixoBroResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || 
+    const fixoBroResponse = data.choices?.[0]?.message?.content || 
       "Sorry, I couldn't process that. Can you try asking again?";
 
     console.log('Fixo Bro response generated successfully');
