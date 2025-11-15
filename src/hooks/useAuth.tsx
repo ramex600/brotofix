@@ -38,26 +38,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (session?.user) {
-          // Defer role fetching
-          setTimeout(async () => {
-            const userRole = await fetchUserRole(session.user.id);
-            setRole(userRole);
-          }, 0);
-        } else {
-          setRole(null);
-        }
-        setLoading(false);
-      }
-    );
-
-    // Check for existing session
+    // Check for existing session first
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
@@ -69,16 +50,33 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setLoading(false);
     });
 
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // Fetch role immediately for faster dashboard loading
+          const userRole = await fetchUserRole(session.user.id);
+          setRole(userRole);
+        } else {
+          setRole(null);
+        }
+        setLoading(false);
+      }
+    );
+
     return () => subscription.unsubscribe();
   }, []);
 
   const signInStudent = async (name: string, password: string) => {
-    // Generate email from name (normalized and with timestamp for uniqueness)
+    // Generate email from name (normalized)
     const normalizedName = name.toLowerCase().replace(/\s+/g, '.');
     const email = `${normalizedName}@student.local`;
     
     // Try to sign in first
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+    let { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -88,7 +86,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       return { error: null };
     }
 
-    // If sign in fails (user doesn't exist), try to sign up automatically
+    // If sign in fails with invalid credentials, try to sign up
     if (signInError?.message?.includes("Invalid login credentials")) {
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email,
@@ -101,6 +99,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           emailRedirectTo: `${window.location.origin}/student/dashboard`,
         },
       });
+
+      // If signup fails because user already exists, this means they signed up before
+      // but are using wrong password, so return the original sign in error
+      if (signUpError?.message?.includes("already registered")) {
+        return { error: { message: "Invalid password. Please check your password and try again." } };
+      }
 
       if (signUpError) {
         console.error("Signup error:", signUpError);
