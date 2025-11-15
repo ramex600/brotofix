@@ -131,10 +131,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       password,
     });
 
-    // If sign in succeeds, ensure admin role is assigned
+    // If sign in succeeds, check if admin is approved
     if (!signInError && signInData.user) {
       // Call the secure function to assign admin role
       await supabase.rpc('assign_admin_role', { _user_id: signInData.user.id });
+      
+      // Check if admin is approved
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('approved')
+        .eq('user_id', signInData.user.id)
+        .eq('role', 'admin')
+        .single();
+      
+      if (!roleData?.approved) {
+        await supabase.auth.signOut();
+        return { error: { message: "Your admin account is pending approval. Please wait for an existing admin to approve your access." } };
+      }
+      
       return { error: null };
     }
 
