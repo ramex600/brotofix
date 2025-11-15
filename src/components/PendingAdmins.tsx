@@ -43,29 +43,43 @@ export const PendingAdmins = () => {
   }, []);
 
   const fetchPendingAdmins = async () => {
-    const { data, error } = await supabase
+    const { data: rolesData, error: rolesError } = await supabase
       .from("user_roles")
-      .select(`
-        user_id,
-        approved,
-        profiles (
-          name,
-          email
-        )
-      `)
+      .select("user_id")
       .eq("role", "admin")
       .eq("approved", false);
 
-    if (error) {
-      console.error("Error fetching pending admins:", error);
-    } else {
-      const formatted = data?.map((item: any) => ({
-        user_id: item.user_id,
-        name: item.profiles?.name || null,
-        email: item.profiles?.email || null,
-      })) || [];
-      setPendingAdmins(formatted);
+    if (rolesError) {
+      console.error("Error fetching pending admins:", rolesError);
+      setLoading(false);
+      return;
     }
+
+    if (!rolesData || rolesData.length === 0) {
+      setPendingAdmins([]);
+      setLoading(false);
+      return;
+    }
+
+    // Fetch profiles for these users
+    const userIds = rolesData.map(r => r.user_id);
+    const { data: profilesData } = await supabase
+      .from("profiles")
+      .select("id, name, email")
+      .in("id", userIds);
+
+    const profilesMap = new Map(profilesData?.map(p => [p.id, p]) || []);
+
+    const formatted = rolesData.map(role => {
+      const profile = profilesMap.get(role.user_id);
+      return {
+        user_id: role.user_id,
+        name: profile?.name || null,
+        email: profile?.email || null,
+      };
+    });
+
+    setPendingAdmins(formatted);
     setLoading(false);
   };
 
