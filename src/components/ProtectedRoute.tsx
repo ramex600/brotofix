@@ -27,6 +27,17 @@ export const ProtectedRoute = ({ children, allowedRole }: ProtectedRouteProps) =
     }
   }, [user, role, loading, allowedRole, navigate]);
 
+  // Add timeout to prevent infinite loading
+  useEffect(() => {
+    if (user && !loading && !role) {
+      const timeout = setTimeout(() => {
+        console.error("Role not assigned to user:", user.id);
+        navigate("/login", { replace: true });
+      }, 5000);
+      return () => clearTimeout(timeout);
+    }
+  }, [user, loading, role, navigate]);
+
   // Show loading state while auth is loading OR while role is being fetched
   if (loading || (user && !role)) {
     return (
