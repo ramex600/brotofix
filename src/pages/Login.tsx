@@ -130,7 +130,7 @@ const Login = () => {
 
         <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
           <CardHeader>
-            <CardTitle className="text-center text-2xl font-bold font-sans">                                                                                                                                                                                                                                       BrotoFix                                                                                                                                                                                                                                                                                                                                                                                                                                                        </CardTitle>
+            <CardTitle className="text-2xl text-center">Complaint Resolution</CardTitle>
             <CardDescription className="text-center">
               Select your role and login to continue
             </CardDescription>

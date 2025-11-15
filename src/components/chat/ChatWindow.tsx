@@ -10,29 +10,21 @@ import { useChatSession, ChatSession } from '@/hooks/useChatSession';
 import { useWebRTC } from '@/hooks/useWebRTC';
 import { useAuth } from '@/hooks/useAuth';
 import ScreenShareDisplay from './ScreenShareDisplay';
+
 interface ChatWindowProps {
   session: ChatSession;
   onClose: () => void;
 }
-const ChatWindow = ({
-  session,
-  onClose
-}: ChatWindowProps) => {
-  const {
-    user
-  } = useAuth();
+
+const ChatWindow = ({ session, onClose }: ChatWindowProps) => {
+  const { user } = useAuth();
   const [message, setMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const {
-    messages,
-    sending,
-    sendMessage,
-    uploadFile
-  } = useChatMessages(session.id, user?.id);
-  const {
-    endSession
-  } = useChatSession(user?.id, session.student_id === user?.id ? 'student' : 'admin');
+  
+  const { messages, sending, sendMessage, uploadFile } = useChatMessages(session.id, user?.id);
+  const { endSession } = useChatSession(user?.id, session.student_id === user?.id ? 'student' : 'admin');
+  
   const isStudent = session.student_id === user?.id;
   const {
     connectionState,
@@ -42,42 +34,50 @@ const ChatWindow = ({
     isAudioEnabled,
     startScreenShare,
     stopScreenShare,
-    toggleAudio
+    toggleAudio,
   } = useWebRTC(session.id, user?.id, isStudent);
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: 'smooth'
-    });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
   const handleSendMessage = async () => {
     if (!message.trim() || sending) return;
+    
     await sendMessage(message);
     setMessage('');
   };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     }
   };
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     const fileUrl = await uploadFile(file);
     if (fileUrl) {
       await sendMessage(`Shared file: ${file.name}`, 'file', fileUrl);
     }
   };
+
   const handleEndChat = async () => {
     await endSession(session.id);
     onClose();
   };
+
   const getStatusColor = () => {
     if (session.status === 'active') return 'bg-green-500';
     if (session.status === 'waiting') return 'bg-yellow-500';
     return 'bg-gray-500';
   };
-  return <Card className="fixed bottom-8 right-8 w-[400px] h-[600px] flex flex-col shadow-2xl z-50 bg-background border-border">
+
+  return (
+    <Card className="fixed bottom-8 right-8 w-[400px] h-[600px] flex flex-col shadow-2xl z-50 bg-background border-border">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-2">
@@ -85,7 +85,9 @@ const ChatWindow = ({
           <h3 className="font-semibold text-foreground">
             {session.status === 'waiting' ? 'Waiting for admin...' : 'Live Chat'}
           </h3>
-          {connectionState === 'connected' && <Badge variant="outline" className="text-xs">Connected</Badge>}
+          {connectionState === 'connected' && (
+            <Badge variant="outline" className="text-xs">Connected</Badge>
+          )}
         </div>
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="h-4 w-4" />
@@ -93,35 +95,62 @@ const ChatWindow = ({
       </div>
 
       {/* Screen Share Display */}
-      {(localStream || remoteStream) && <ScreenShareDisplay localStream={localStream} remoteStream={remoteStream} isScreenSharing={isScreenSharing} />}
+      {(localStream || remoteStream) && (
+        <ScreenShareDisplay
+          localStream={localStream}
+          remoteStream={remoteStream}
+          isScreenSharing={isScreenSharing}
+        />
+      )}
 
       {/* Messages */}
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-4">
-          {messages.map(msg => {
-          const isOwn = msg.sender_id === user?.id;
-          const isSystem = msg.message_type === 'system';
-          if (isSystem) {
-            return <div key={msg.id} className="flex justify-center">
+          {messages.map((msg) => {
+            const isOwn = msg.sender_id === user?.id;
+            const isSystem = msg.message_type === 'system';
+
+            if (isSystem) {
+              return (
+                <div key={msg.id} className="flex justify-center">
                   <Badge variant="secondary" className="text-xs">
                     {msg.message}
                   </Badge>
-                </div>;
-          }
-          return <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] rounded-lg px-4 py-2 ${isOwn ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground'}`}>
-                  {msg.message_type === 'file' && msg.file_url ? <a href={msg.file_url} target="_blank" rel="noopener noreferrer" className="underline hover:no-underline">
+                </div>
+              );
+            }
+
+            return (
+              <div key={msg.id} className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                    isOwn
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  {msg.message_type === 'file' && msg.file_url ? (
+                    <a
+                      href={msg.file_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline hover:no-underline"
+                    >
                       {msg.message}
-                    </a> : <p className="text-sm">{msg.message}</p>}
+                    </a>
+                  ) : (
+                    <p className="text-sm">{msg.message}</p>
+                  )}
                   <span className="text-xs opacity-70 mt-1 block">
                     {new Date(msg.created_at).toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit'
-                })}
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
                   </span>
                 </div>
-              </div>;
-        })}
+              </div>
+            );
+          })}
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
@@ -129,31 +158,67 @@ const ChatWindow = ({
       {/* Controls */}
       <div className="p-4 border-t border-border space-y-2">
         {/* WebRTC Controls */}
-        {session.status === 'active' && <div className="flex gap-2 mb-2">
-            <Button size="sm" variant={isScreenSharing ? 'default' : 'outline'} onClick={isScreenSharing ? stopScreenShare : startScreenShare} className="flex-1">
+        {session.status === 'active' && (
+          <div className="flex gap-2 mb-2">
+            <Button
+              size="sm"
+              variant={isScreenSharing ? 'default' : 'outline'}
+              onClick={isScreenSharing ? stopScreenShare : startScreenShare}
+              className="flex-1"
+            >
               <Monitor className="h-4 w-4 mr-2" />
               {isScreenSharing ? 'Stop Sharing' : 'Share Screen'}
             </Button>
-            <Button size="sm" variant={isAudioEnabled ? 'default' : 'outline'} onClick={toggleAudio}>
+            <Button
+              size="sm"
+              variant={isAudioEnabled ? 'default' : 'outline'}
+              onClick={toggleAudio}
+            >
               {isAudioEnabled ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
             </Button>
-          </div>}
+          </div>
+        )}
 
         {/* Message Input */}
         <div className="flex gap-2">
-          <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileSelect} />
-          
-          <Input value={message} onChange={e => setMessage(e.target.value)} onKeyPress={handleKeyPress} placeholder="Type a message..." disabled={sending} className="flex-1" />
+          <input
+            ref={fileInputRef}
+            type="file"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+          <Button
+            size="icon"
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            <Paperclip className="h-4 w-4" />
+          </Button>
+          <Input
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Type a message..."
+            disabled={sending}
+            className="flex-1"
+          />
           <Button onClick={handleSendMessage} disabled={sending || !message.trim()}>
             <Send className="h-4 w-4" />
           </Button>
         </div>
 
         {/* End Chat Button */}
-        <Button variant="destructive" size="sm" onClick={handleEndChat} className="w-full">
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={handleEndChat}
+          className="w-full"
+        >
           End Chat
         </Button>
       </div>
-    </Card>;
+    </Card>
+  );
 };
+
 export default ChatWindow;
