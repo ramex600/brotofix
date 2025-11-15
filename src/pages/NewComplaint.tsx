@@ -84,6 +84,32 @@ const NewComplaint = () => {
         description,
       });
 
+      // Ensure profile exists before submitting complaint
+      const { data: existingProfile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!existingProfile) {
+        // Create profile if it doesn't exist
+        const userName = user.user_metadata?.name || user.email?.split('@')[0] || 'Student';
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .insert({
+            id: user.id,
+            name: userName,
+            student_id: user.user_metadata?.student_id || `STU-${Math.random().toString(36).substr(2, 8).toUpperCase()}`,
+            course: user.user_metadata?.course || 'General',
+            email: user.email,
+          });
+
+        if (profileError) {
+          console.error("Profile creation error:", profileError);
+          // Continue even if profile creation fails - complaint submission should still work
+        }
+      }
+
       let filePath: string | null = null;
 
       // Upload file if exists
