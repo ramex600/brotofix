@@ -31,16 +31,16 @@ interface Profile {
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       if (!user) {
-        setLoading(false);
+        setDataLoading(false);
         return;
       }
 
@@ -97,7 +97,7 @@ const StudentDashboard = () => {
           description: "Failed to load dashboard data. Please try refreshing the page.",
         });
       } finally {
-        setLoading(false);
+        setDataLoading(false);
       }
     };
 
@@ -212,7 +212,7 @@ const StudentDashboard = () => {
     return colors[category] || "bg-muted text-muted-foreground";
   };
 
-  if (loading) {
+  if (authLoading || dataLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -323,7 +323,28 @@ const StudentDashboard = () => {
         {/* Complaints List */}
         <div>
           <h3 className="text-2xl font-bold mb-4">My Complaints</h3>
-          {complaints.length === 0 ? (
+          {dataLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="animate-pulse">
+                  <CardHeader>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="h-6 w-24 bg-muted rounded"></div>
+                      <div className="h-6 w-20 bg-muted rounded"></div>
+                    </div>
+                    <div className="h-4 w-3/4 bg-muted rounded"></div>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="h-20 bg-muted rounded"></div>
+                    <div className="flex items-center justify-between pt-4 border-t">
+                      <div className="h-4 w-40 bg-muted rounded"></div>
+                      <div className="h-8 w-32 bg-muted rounded"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : complaints.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-16">
                 <FileText className="w-16 h-16 text-muted-foreground mb-4" />
