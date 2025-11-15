@@ -10,7 +10,7 @@ interface AuthContextType {
   session: Session | null;
   role: UserRole;
   loading: boolean;
-  signInStudent: (email: string, name: string, password: string) => Promise<{ error: any }>;
+  signInStudent: (name: string, password: string) => Promise<{ error: any }>;
   signInAdmin: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
@@ -72,7 +72,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signInStudent = async (email: string, name: string, password: string) => {
+  const signInStudent = async (name: string, password: string) => {
+    // Generate email from name (normalized and with timestamp for uniqueness)
+    const normalizedName = name.toLowerCase().replace(/\s+/g, '.');
+    const email = `${normalizedName}@student.local`;
+    
     // Try to sign in first
     const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
       email,
