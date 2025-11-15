@@ -32,11 +32,14 @@ export const ProfileCompletionDialog = ({ userId, currentProfile, onComplete }: 
   const { toast } = useToast();
 
   useEffect(() => {
+    // Only check if profile data is loaded
+    if (!currentProfile) return;
+    
     // Check if profile needs completion
-    const needsCompletion = !currentProfile?.student_id || 
-                           !currentProfile?.course || 
-                           currentProfile?.student_id?.startsWith('STU-') ||
-                           currentProfile?.course === 'General';
+    const needsCompletion = !currentProfile.student_id || 
+                           !currentProfile.course || 
+                           currentProfile.student_id.startsWith('STU-') ||
+                           currentProfile.course === 'General';
     
     if (needsCompletion) {
       // Check if user has dismissed this before
@@ -47,9 +50,9 @@ export const ProfileCompletionDialog = ({ userId, currentProfile, onComplete }: 
     }
 
     // Pre-fill with current values
-    setEmail(currentProfile?.email || "");
-    setStudentId(currentProfile?.student_id || "");
-    setCourse(currentProfile?.course || "");
+    setEmail(currentProfile.email || "");
+    setStudentId(currentProfile.student_id || "");
+    setCourse(currentProfile.course || "");
   }, [currentProfile, userId]);
 
   const handleDismiss = () => {
