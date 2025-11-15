@@ -27,8 +27,8 @@ export const ProtectedRoute = ({ children, allowedRole }: ProtectedRouteProps) =
     }
   }, [user, role, loading, allowedRole, navigate]);
 
-  // Show loading state
-  if (loading) {
+  // Show loading state while auth is loading OR while role is being fetched
+  if (loading || (user && !role)) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -39,8 +39,13 @@ export const ProtectedRoute = ({ children, allowedRole }: ProtectedRouteProps) =
     );
   }
 
+  // If not logged in, show nothing (redirect will handle it)
+  if (!user) {
+    return null;
+  }
+
   // If user is authenticated and has correct role, show content
-  if (user && role === allowedRole) {
+  if (role === allowedRole) {
     return <>{children}</>;
   }
 
