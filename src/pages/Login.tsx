@@ -178,9 +178,7 @@ const Login = () => {
                   <Button type="submit" className="w-full" disabled={adminLoading}>
                     {adminLoading ? "Logging in..." : "Login as Admin"}
                   </Button>
-                  <p className="text-xs text-muted-foreground text-center">
-                    Use: admin@brototype.com / admin123
-                  </p>
+                  
                 </form>
               </TabsContent>
             </Tabs>
