@@ -7,12 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Download, Save, User, Calendar, FileText } from "lucide-react";
+import { ArrowLeft, Download, Save, User, Calendar, FileText, MessageCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import brototypelogo from "@/assets/brototype-logo.jpg";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useChatSession } from "@/hooks/useChatSession";
+import ChatWindow from "@/components/chat/ChatWindow";
 
 const updateSchema = z.object({
   status: z.enum(["pending", "in-progress", "resolved"]),
@@ -28,6 +30,7 @@ interface ComplaintDetails {
   admin_notes: string | null;
   created_at: string;
   updated_at: string;
+  student_id: string; // UUID
   student_name: string;
   student_id_display: string;
   course: string;
@@ -45,6 +48,9 @@ const AdminComplaintView = () => {
   const [adminNotes, setAdminNotes] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+
+  const { activeSession, createSession, joinSession } = useChatSession(user?.id, 'admin');
 
   useEffect(() => {
     const fetchComplaint = async () => {
@@ -82,6 +88,7 @@ const AdminComplaintView = () => {
         admin_notes: data.admin_notes,
         created_at: data.created_at,
         updated_at: data.updated_at,
+        student_id: data.student_id,
         student_name: profileData?.name || "Unknown Student",
         student_id_display: profileData?.student_id || "N/A",
         course: profileData?.course || "N/A",
@@ -281,6 +288,35 @@ const AdminComplaintView = () => {
                 <p className="text-sm text-muted-foreground mb-1">Email</p>
                 <p className="font-semibold text-sm">{complaint.student_email}</p>
               </div>
+              <div className="md:col-span-2">
+                <Button 
+                  onClick={async () => {
+                    // Check if there's an active session with this student
+                    const { data: existingSession } = await supabase
+                      .from('chat_sessions')
+                      .select('*')
+                      .eq('student_id', complaint.student_id)
+                      .neq('status', 'ended')
+                      .maybeSingle();
+
+                    if (existingSession) {
+                      await joinSession(existingSession.id);
+                      setShowChat(true);
+                    } else {
+                      toast({
+                        title: 'No Active Chat',
+                        description: 'Student must initiate a chat first',
+                        variant: 'destructive',
+                      });
+                    }
+                  }}
+                  className="w-full"
+                  variant="outline"
+                >
+                  <MessageCircle className="w-4 h-4 mr-2" />
+                  Start Live Chat
+                </Button>
+              </div>
             </CardContent>
           </Card>
 
@@ -387,6 +423,11 @@ const AdminComplaintView = () => {
           </Card>
         </div>
       </main>
+
+      {/* Chat Window */}
+      {showChat && activeSession && (
+        <ChatWindow session={activeSession} onClose={() => setShowChat(false)} />
+      )}
     </div>
   );
 };
