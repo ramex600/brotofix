@@ -12,6 +12,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { FixoBro } from "@/components/FixoBro";
 import { NotificationBell } from "@/components/NotificationBell";
 import { ProfileCompletionDialog } from "@/components/ProfileCompletionDialog";
+import { ProfileEditDialog } from "@/components/ProfileEditDialog";
 
 interface Complaint {
   id: string;
@@ -299,6 +300,13 @@ const StudentDashboard = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {profile && user && (
+              <ProfileEditDialog
+                userId={user.id}
+                currentProfile={profile}
+                onUpdate={handleProfileComplete}
+              />
+            )}
             <NotificationBell userId={user?.id} userRole="student" />
             <ThemeToggle />
             <Button variant="outline" onClick={handleLogout}>
