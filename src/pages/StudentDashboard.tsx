@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { FixoBro } from "@/components/FixoBro";
 import { NotificationBell } from "@/components/NotificationBell";
+import { ProfileCompletionDialog } from "@/components/ProfileCompletionDialog";
 
 interface Complaint {
   id: string;
@@ -27,6 +28,7 @@ interface Profile {
   name: string;
   student_id: string;
   course: string;
+  email?: string | null;
 }
 
 const StudentDashboard = () => {
@@ -37,6 +39,7 @@ const StudentDashboard = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
   const [showFixoGreeting, setShowFixoGreeting] = useState(false);
+  const [profileKey, setProfileKey] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -148,6 +151,22 @@ const StudentDashboard = () => {
     navigate("/login");
   };
 
+  const handleProfileComplete = async () => {
+    // Refresh profile data
+    if (user) {
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+      
+      if (profileData) {
+        setProfile(profileData);
+        setProfileKey(prev => prev + 1);
+      }
+    }
+  };
+
   const handleMarkResolved = async (complaintId: string, currentStatus: string) => {
     if (currentStatus === "resolved") {
       toast({
@@ -253,6 +272,16 @@ const StudentDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Profile Completion Dialog */}
+      {user && (
+        <ProfileCompletionDialog
+          key={profileKey}
+          userId={user.id}
+          currentProfile={profile}
+          onComplete={handleProfileComplete}
+        />
+      )}
+      
       {/* Header */}
       <header className="border-b border-border/50 bg-card/30 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
