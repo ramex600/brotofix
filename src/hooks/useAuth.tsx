@@ -82,8 +82,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       password,
     });
 
-    // If sign in succeeds, return success
+    // If sign in succeeds, ensure student role exists
     if (!signInError && signInData.user) {
+      // Call the function to ensure student role is assigned
+      await supabase.rpc('assign_student_role', { _user_id: signInData.user.id });
       return { error: null };
     }
 
@@ -112,7 +114,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { error: signUpError };
       }
 
+      // Assign student role to new user
       if (signUpData.user) {
+        await supabase.rpc('assign_student_role', { _user_id: signUpData.user.id });
         return { error: null };
       }
     }
