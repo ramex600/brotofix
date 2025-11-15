@@ -10,7 +10,6 @@ import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import brototypelogo from "@/assets/brototype-logo.jpg";
 const studentSchema = z.object({
-  email: z.string().trim().email("Invalid email address"),
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(100),
   password: z.string().min(6, "Password must be at least 6 characters")
 });
@@ -29,7 +28,6 @@ const Login = () => {
   const {
     toast
   } = useToast();
-  const [studentEmail, setStudentEmail] = useState("");
   const [studentName, setStudentName] = useState("");
   const [studentPassword, setStudentPassword] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
@@ -54,13 +52,12 @@ const Login = () => {
     setStudentLoading(true);
     try {
       const validated = studentSchema.parse({
-        email: studentEmail,
         name: studentName,
         password: studentPassword
       });
       const {
         error
-      } = await signInStudent(validated.email, validated.name, validated.password);
+      } = await signInStudent(validated.name, validated.password);
       if (error) {
         toast({
           variant: "destructive",
@@ -144,10 +141,6 @@ const Login = () => {
 
               <TabsContent value="student">
                 <form onSubmit={handleStudentLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="student-email">Email *</Label>
-                    
-                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="student-name">Name *</Label>
                     <Input id="student-name" type="text" placeholder="Your full name" value={studentName} onChange={e => setStudentName(e.target.value)} required maxLength={100} />
