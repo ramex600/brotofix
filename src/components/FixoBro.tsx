@@ -2,10 +2,12 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { X, Send, Bot } from "lucide-react";
+import { X, Send, Bot, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useVoiceMode } from "@/hooks/useVoiceMode";
+import { cn } from "@/lib/utils";
 
 interface Message {
   role: "user" | "assistant";
@@ -17,9 +19,28 @@ export const FixoBro = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [voiceModeEnabled, setVoiceModeEnabled] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const lastAssistantMessageRef = useRef<string>("");
+
+  const handleVoiceTranscript = (text: string) => {
+    setInput(text);
+    handleSend(text);
+  };
+
+  const {
+    isListening,
+    isSpeaking,
+    isSupported,
+    startListening,
+    stopListening,
+    speak,
+    stopSpeaking,
+  } = useVoiceMode({
+    onTranscript: handleVoiceTranscript,
+  });
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -41,10 +62,10 @@ export const FixoBro = () => {
     }
   }, [isOpen]);
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+  const handleSend = async (messageText?: string) => {
+    const userMessage = (messageText || input).trim();
+    if (!userMessage || isLoading) return;
 
-    const userMessage = input.trim();
     setInput("");
     setMessages(prev => [...prev, { role: "user", content: userMessage }]);
     setIsLoading(true);
@@ -60,7 +81,14 @@ export const FixoBro = () => {
       if (error) throw error;
 
       if (data?.response) {
-        setMessages(prev => [...prev, { role: "assistant", content: data.response }]);
+        const assistantMessage = data.response;
+        setMessages(prev => [...prev, { role: "assistant", content: assistantMessage }]);
+        lastAssistantMessageRef.current = assistantMessage;
+        
+        // Auto-speak response in voice mode
+        if (voiceModeEnabled && isSupported) {
+          speak(assistantMessage);
+        }
       } else {
         throw new Error('No response from Fixo Bro');
       }
@@ -71,10 +99,14 @@ export const FixoBro = () => {
         title: "Connection Error",
         description: "Couldn't reach Fixo Bro. Please try again."
       });
+      const errorMsg = "Oops! I'm having trouble connecting. Please try again in a moment.";
       setMessages(prev => [...prev, { 
         role: "assistant", 
-        content: "Oops! I'm having trouble connecting. Please try again in a moment." 
+        content: errorMsg
       }]);
+      if (voiceModeEnabled && isSupported) {
+        speak(errorMsg);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -111,17 +143,43 @@ export const FixoBro = () => {
               </div>
               <div>
                 <h3 className="font-bold">Fixo Bro</h3>
-                <p className="text-xs opacity-90">Tech Support Assistant</p>
+                <p className="text-xs opacity-90">
+                  {voiceModeEnabled ? (isListening ? 'Listening...' : isSpeaking ? 'Speaking...' : 'Voice Mode') : 'Tech Support Assistant'}
+                </p>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsOpen(false)}
-              className="hover:bg-destructive-foreground/10"
-            >
-              <X className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-2">
+              {isSupported && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setVoiceModeEnabled(!voiceModeEnabled);
+                    if (voiceModeEnabled) {
+                      stopListening();
+                      stopSpeaking();
+                    }
+                  }}
+                  className="hover:bg-destructive-foreground/10"
+                  aria-label={voiceModeEnabled ? "Disable voice mode" : "Enable voice mode"}
+                  title={voiceModeEnabled ? "Voice Mode ON" : "Voice Mode OFF"}
+                >
+                  {voiceModeEnabled ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setIsOpen(false);
+                  stopListening();
+                  stopSpeaking();
+                }}
+                className="hover:bg-destructive-foreground/10"
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
 
           {/* Messages */}
@@ -163,22 +221,62 @@ export const FixoBro = () => {
           {/* Input */}
           <div className="p-4 border-t border-border bg-background">
             <div className="flex gap-2">
-              <Input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Describe your device issue..."
-                disabled={isLoading}
-                className="flex-1"
-              />
-              <Button
-                onClick={handleSend}
-                disabled={!input.trim() || isLoading}
-                size="icon"
-                className="bg-destructive hover:bg-destructive/90"
-              >
-                <Send className="h-4 w-4" />
-              </Button>
+              {voiceModeEnabled && isSupported ? (
+                <>
+                  <Button
+                    onClick={isListening ? stopListening : startListening}
+                    disabled={isLoading || isSpeaking}
+                    className={cn(
+                      "flex-1 transition-all",
+                      isListening 
+                        ? "bg-red-500 hover:bg-red-600 animate-pulse" 
+                        : "bg-destructive hover:bg-destructive/90"
+                    )}
+                    aria-label={isListening ? "Stop listening" : "Start listening"}
+                  >
+                    {isListening ? (
+                      <>
+                        <MicOff className="h-4 w-4 mr-2" />
+                        Stop Listening
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="h-4 w-4 mr-2" />
+                        {isSpeaking ? 'Speaking...' : 'Tap to Speak'}
+                      </>
+                    )}
+                  </Button>
+                  {isSpeaking && (
+                    <Button
+                      onClick={stopSpeaking}
+                      variant="outline"
+                      size="icon"
+                      aria-label="Stop speaking"
+                    >
+                      <VolumeX className="h-4 w-4" />
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <>
+                  <Input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Describe your device issue..."
+                    disabled={isLoading}
+                    className="flex-1"
+                  />
+                  <Button
+                    onClick={() => handleSend()}
+                    disabled={!input.trim() || isLoading}
+                    size="icon"
+                    className="bg-destructive hover:bg-destructive/90"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </Card>
