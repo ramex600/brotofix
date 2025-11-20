@@ -380,7 +380,7 @@ const AdminComplaintView = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleUpdate} className="space-y-4">
+              <form onSubmit={handleSave} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="status">Status</Label>
                   <Select value={status} onValueChange={setStatus}>
@@ -426,74 +426,9 @@ const AdminComplaintView = () => {
       {/* Live Chat Window */}
       {showChat && activeSession && (
         <ChatWindow
-          sessionId={activeSession.id}
-          userId={user?.id || ''}
-          userRole="admin"
-          studentId={complaint.student_id}
+          session={activeSession}
           onClose={() => setShowChat(false)}
         />
-      )}
-    </div>
-  );
-};
-
-export default AdminComplaintView;
-              <div className="space-y-2">
-                <Label htmlFor="status">Status *</Label>
-                <Select value={status} onValueChange={setStatus}>
-                  <SelectTrigger id="status">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="in-progress">In Progress</SelectItem>
-                    <SelectItem value="resolved">Resolved</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="admin-notes">Resolution Notes</Label>
-                <Textarea
-                  id="admin-notes"
-                  placeholder="Add notes about the resolution or any actions taken..."
-                  value={adminNotes}
-                  onChange={(e) => setAdminNotes(e.target.value)}
-                  rows={6}
-                  maxLength={2000}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {adminNotes.length}/2000 characters
-                </p>
-              </div>
-
-              <div className="flex gap-4 pt-4">
-                <Button onClick={handleSave} disabled={saving} className="flex-1">
-                  <Save className="w-4 h-4 mr-2" />
-                  {saving ? "Saving..." : "Save Changes"}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => navigate("/admin/dashboard")}
-                  disabled={saving}
-                >
-                  Cancel
-                </Button>
-              </div>
-
-              {complaint.updated_at !== complaint.created_at && (
-                <p className="text-xs text-muted-foreground text-center pt-2">
-                  Last updated: {new Date(complaint.updated_at).toLocaleString()}
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </main>
-
-      {/* Chat Window */}
-      {showChat && activeSession && (
-        <ChatWindow session={activeSession} onClose={() => setShowChat(false)} />
       )}
     </div>
   );

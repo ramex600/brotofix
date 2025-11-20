@@ -46,71 +46,70 @@ const StudentDashboard = () => {
   const [profileKey, setProfileKey] = useState(0);
   const [ratingComplaintId, setRatingComplaintId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!user) {
-        setDataLoading(false);
-        return;
+  const fetchData = async () => {
+    if (!user) {
+      setDataLoading(false);
+      return;
+    }
+
+    try {
+      // Try to get profile from database first
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (profileData) {
+        setProfile(profileData);
+      } else {
+        // Fallback to localStorage or user metadata
+        const storedData = localStorage.getItem('student_data');
+        if (storedData) {
+          const parsed = JSON.parse(storedData);
+          setProfile({
+            name: parsed.name,
+            student_id: parsed.student_id,
+            course: parsed.course
+          });
+        } else if (user.user_metadata) {
+          setProfile({
+            name: user.user_metadata.name || 'Student',
+            student_id: user.user_metadata.student_id || 'N/A',
+            course: user.user_metadata.course || 'N/A'
+          });
+        }
       }
 
-      try {
-        // Try to get profile from database first
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", user.id)
-          .maybeSingle();
+      // Fetch complaints
+      const { data: complaintsData, error } = await supabase
+        .from("complaints")
+        .select("*")
+        .eq("student_id", user.id)
+        .order("created_at", { ascending: false });
 
-        if (profileData) {
-          setProfile(profileData);
-        } else {
-          // Fallback to localStorage or user metadata
-          const storedData = localStorage.getItem('student_data');
-          if (storedData) {
-            const parsed = JSON.parse(storedData);
-            setProfile({
-              name: parsed.name,
-              student_id: parsed.student_id,
-              course: parsed.course
-            });
-          } else if (user.user_metadata) {
-            setProfile({
-              name: user.user_metadata.name || 'Student',
-              student_id: user.user_metadata.student_id || 'N/A',
-              course: user.user_metadata.course || 'N/A'
-            });
-          }
-        }
-
-        // Fetch complaints
-        const { data: complaintsData, error } = await supabase
-          .from("complaints")
-          .select("*")
-          .eq("student_id", user.id)
-          .order("created_at", { ascending: false });
-
-        if (error) {
-          toast({
-            variant: "destructive",
-            title: "Error loading complaints",
-            description: error.message,
-          });
-        } else {
-          setComplaints(complaintsData as Complaint[] || []);
-        }
-      } catch (error) {
-        console.error("Error fetching data:", error);
+      if (error) {
         toast({
           variant: "destructive",
-          title: "Error",
-          description: "Failed to load dashboard data. Please try refreshing the page.",
+          title: "Error loading complaints",
+          description: error.message,
         });
-      } finally {
-        setDataLoading(false);
+      } else {
+        setComplaints(complaintsData as Complaint[] || []);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load dashboard data. Please try refreshing the page.",
+      });
+    } finally {
+      setDataLoading(false);
+    }
+  };
 
-    fetchData();
+  useEffect(() => {
 
     // Show Fixo Bro greeting on first login (check localStorage)
     const hasSeenGreeting = localStorage.getItem('fixobro_greeting_shown');
@@ -489,18 +488,6 @@ const StudentDashboard = () => {
                 </Card>
               ))}
             </div>
-          )}
-        </div>
-      </main>
-
-      {/* Fixo Bro AI Assistant */}
-      <FixoBro />
-      <LiveChatButton />
-    </div>
-  );
-};
-
-export default StudentDashboard;
           )}
         </div>
       </main>
