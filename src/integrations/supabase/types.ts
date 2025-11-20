@@ -96,6 +96,53 @@ export type Database = {
           },
         ]
       }
+      complaint_timeline: {
+        Row: {
+          actor_id: string | null
+          actor_name: string | null
+          actor_role: string | null
+          comment: string | null
+          complaint_id: string
+          created_at: string | null
+          event_type: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_name?: string | null
+          actor_role?: string | null
+          comment?: string | null
+          complaint_id: string
+          created_at?: string | null
+          event_type: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          actor_name?: string | null
+          actor_role?: string | null
+          comment?: string | null
+          complaint_id?: string
+          created_at?: string | null
+          event_type?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "complaint_timeline_complaint_id_fkey"
+            columns: ["complaint_id"]
+            isOneToOne: false
+            referencedRelation: "complaints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       complaints: {
         Row: {
           admin_notes: string | null
@@ -108,8 +155,12 @@ export type Database = {
           created_at: string
           description: string
           device_info: Json | null
-          file_path: string | null
+          file_metadata: Json[] | null
+          file_paths: string[] | null
           id: string
+          rated_at: string | null
+          satisfaction_comment: string | null
+          satisfaction_rating: number | null
           screenshot_analysis: Json | null
           status: string
           student_id: string
@@ -126,8 +177,12 @@ export type Database = {
           created_at?: string
           description: string
           device_info?: Json | null
-          file_path?: string | null
+          file_metadata?: Json[] | null
+          file_paths?: string[] | null
           id?: string
+          rated_at?: string | null
+          satisfaction_comment?: string | null
+          satisfaction_rating?: number | null
           screenshot_analysis?: Json | null
           status?: string
           student_id: string
@@ -144,8 +199,12 @@ export type Database = {
           created_at?: string
           description?: string
           device_info?: Json | null
-          file_path?: string | null
+          file_metadata?: Json[] | null
+          file_paths?: string[] | null
           id?: string
+          rated_at?: string | null
+          satisfaction_comment?: string | null
+          satisfaction_rating?: number | null
           screenshot_analysis?: Json | null
           status?: string
           student_id?: string
@@ -271,7 +330,20 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      admin_satisfaction_stats: {
+        Row: {
+          avg_rating: number | null
+          five_star_count: number | null
+          four_star_count: number | null
+          negative_count: number | null
+          one_star_count: number | null
+          positive_count: number | null
+          three_star_count: number | null
+          total_ratings: number | null
+          two_star_count: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       approve_admin: { Args: { _admin_user_id: string }; Returns: undefined }

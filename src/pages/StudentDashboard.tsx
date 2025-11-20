@@ -14,16 +14,18 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { ProfileCompletionDialog } from "@/components/ProfileCompletionDialog";
 import { ProfileEditDialog } from "@/components/ProfileEditDialog";
 import LiveChatButton from "@/components/chat/LiveChatButton";
+import { SatisfactionRating } from "@/components/SatisfactionRating";
 
 interface Complaint {
   id: string;
   category: string;
   description: string;
   status: "pending" | "in-progress" | "resolved";
-  file_path: string | null;
+  file_paths: string[] | null;
   admin_notes: string | null;
   created_at: string;
   updated_at: string;
+  satisfaction_rating?: number | null;
 }
 
 interface Profile {
@@ -42,6 +44,7 @@ const StudentDashboard = () => {
   const [dataLoading, setDataLoading] = useState(true);
   const [showFixoGreeting, setShowFixoGreeting] = useState(false);
   const [profileKey, setProfileKey] = useState(0);
+  const [ratingComplaintId, setRatingComplaintId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -274,6 +277,19 @@ const StudentDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Satisfaction Rating Dialog */}
+      {ratingComplaintId && (
+        <SatisfactionRating
+          complaintId={ratingComplaintId}
+          isOpen={!!ratingComplaintId}
+          onClose={() => setRatingComplaintId(null)}
+          onRated={() => {
+            setRatingComplaintId(null);
+            fetchData();
+          }}
+        />
+      )}
+      
       {/* Profile Completion Dialog */}
       {user && (
         <ProfileCompletionDialog
@@ -434,16 +450,22 @@ const StudentDashboard = () => {
                       </div>
                     )}
 
-                    {/* File Download */}
-                    {complaint.file_path && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDownloadFile(complaint.file_path!)}
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Download Attachment
-                      </Button>
+                    {/* File Downloads */}
+                    {complaint.file_paths && complaint.file_paths.length > 0 && (
+                      <div className="space-y-1">
+                        {complaint.file_paths.map((filePath, index) => (
+                          <Button
+                            key={index}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownloadFile(filePath)}
+                            className="w-full justify-start"
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            Attachment {index + 1}
+                          </Button>
+                        ))}
+                      </div>
                     )}
 
                     {/* Footer */}
@@ -453,14 +475,13 @@ const StudentDashboard = () => {
                         {complaint.updated_at !== complaint.created_at &&
                           ` • Updated ${new Date(complaint.updated_at).toLocaleDateString()}`}
                       </p>
-                      {complaint.status !== "resolved" && (
+                      {complaint.status === "resolved" && !complaint.satisfaction_rating && (
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleMarkResolved(complaint.id, complaint.status)}
+                          onClick={() => setRatingComplaintId(complaint.id)}
                         >
-                          <CheckCircle className="w-4 h-4 mr-2" />
-                          Mark as Resolved
+                          Rate Experience
                         </Button>
                       )}
                     </div>
@@ -468,6 +489,18 @@ const StudentDashboard = () => {
                 </Card>
               ))}
             </div>
+          )}
+        </div>
+      </main>
+
+      {/* Fixo Bro AI Assistant */}
+      <FixoBro />
+      <LiveChatButton />
+    </div>
+  );
+};
+
+export default StudentDashboard;
           )}
         </div>
       </main>

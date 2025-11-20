@@ -2,12 +2,11 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Upload, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
@@ -17,6 +16,7 @@ import { FixoBro } from "@/components/FixoBro";
 import { detectDeviceInfo, type DeviceInfo } from "@/utils/deviceDetection";
 import { AIAnalysisCard } from "@/components/AIAnalysisCard";
 import { ScreenshotAnalysisCard } from "@/components/ScreenshotAnalysisCard";
+import { MultiFileUpload } from "@/components/MultiFileUpload";
 
 const complaintSchema = z.object({
   category: z.enum(["Classroom", "Mentor", "Environment", "Misc"]),
@@ -30,7 +30,7 @@ const NewComplaint = () => {
   
   const [category, setCategory] = useState<string>("");
   const [description, setDescription] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<Array<{ file: File; preview?: string; type: 'image' | 'video' | 'pdf' | 'other' }>>([]);
   const [uploading, setUploading] = useState(false);
   
   // Device info
@@ -85,8 +85,20 @@ const NewComplaint = () => {
     return () => clearTimeout(timeoutId);
   }, [description, user?.id]);
 
-  // Screenshot analysis
-  const analyzeScreenshot = useCallback(async (file: File) => {
+  // Screenshot analysis - analyze first image file when files change
+  useEffect(() => {
+    const imageFile = files.find(f => f.type === 'image');
+    if (imageFile && !screenshotAnalysis) {
+      analyzeScreenshot(imageFile.file);
+    }
+  }, [files]);
+
+  const handleFilesChange = (newFiles: typeof files) => {
+    setFiles(newFiles);
+  };
+
+  // Screenshot analysis function
+  const analyzeScreenshot = async (file: File) => {
     if (!file.type.startsWith('image/')) return;
 
     setIsAnalyzingScreenshot(true);
@@ -132,45 +144,6 @@ const NewComplaint = () => {
     } finally {
       setIsAnalyzingScreenshot(false);
     }
-  }, [toast]);
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      
-      // Validate file size (5MB max)
-      if (selectedFile.size > 5 * 1024 * 1024) {
-        toast({
-          variant: "destructive",
-          title: "File Too Large",
-          description: "Please select a file smaller than 5MB",
-        });
-        return;
-      }
-
-      // Validate file type
-      const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp", "application/pdf"];
-      if (!allowedTypes.includes(selectedFile.type)) {
-        toast({
-          variant: "destructive",
-          title: "Invalid File Type",
-          description: "Only images (JPG, PNG, WEBP) and PDF files are allowed",
-        });
-        return;
-      }
-
-      setFile(selectedFile);
-      
-      // Analyze screenshot if it's an image
-      if (selectedFile.type.startsWith('image/')) {
-        analyzeScreenshot(selectedFile);
-      }
-    }
-  };
-
-  const removeFile = () => {
-    setFile(null);
-    setScreenshotAnalysis(null);
   };
 
   const handleAcceptCategory = () => {
@@ -230,22 +203,32 @@ const NewComplaint = () => {
         }
       }
 
-      let filePath: string | null = null;
+      let filePaths: string[] = [];
+      const fileMetadata: any[] = [];
 
-      // Upload file if exists
-      if (file) {
-        const fileExt = file.name.split(".").pop();
-        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+      // Upload all files
+      if (files.length > 0) {
+        for (const fileItem of files) {
+          const fileExt = fileItem.file.name.split(".").pop();
+          const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
 
-        const { error: uploadError } = await supabase.storage
-          .from("complaint-files")
-          .upload(fileName, file);
+          const { error: uploadError } = await supabase.storage
+            .from("complaint-files")
+            .upload(fileName, fileItem.file);
 
-        if (uploadError) {
-          throw new Error(`File upload failed: ${uploadError.message}`);
+          if (uploadError) {
+            throw new Error(`File upload failed: ${uploadError.message}`);
+          }
+
+          filePaths.push(fileName);
+          fileMetadata.push({
+            url: fileName,
+            type: fileItem.file.type,
+            size: fileItem.file.size,
+            name: fileItem.file.name,
+            uploaded_at: new Date().toISOString()
+          });
         }
-
-        filePath = fileName;
       }
 
       // Insert complaint with AI data and device info
@@ -253,7 +236,8 @@ const NewComplaint = () => {
         student_id: user.id,
         category: validated.category,
         description: validated.description,
-        file_path: filePath,
+        file_paths: filePaths,
+        file_metadata: fileMetadata,
         device_info: deviceInfo,
         ai_category_suggestion: aiAnalysis?.category,
         ai_root_cause: aiAnalysis?.rootCause,
@@ -268,9 +252,9 @@ const NewComplaint = () => {
         .insert(complaintData);
 
       if (insertError) {
-        // If complaint insert fails, delete uploaded file
-        if (filePath) {
-          await supabase.storage.from("complaint-files").remove([filePath]);
+        // If complaint insert fails, delete uploaded files
+        if (filePaths.length > 0) {
+          await supabase.storage.from("complaint-files").remove(filePaths);
         }
         throw new Error(insertError.message);
       }
@@ -400,46 +384,14 @@ const NewComplaint = () => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="file">Attachment (Optional)</Label>
-                {!file ? (
-                  <div className="border-2 border-dashed border-border rounded-lg p-6 text-center hover:border-primary/50 transition-colors">
-                    <Input
-                      id="file"
-                      type="file"
-                      onChange={handleFileChange}
-                      className="hidden"
-                      accept="image/jpeg,image/jpg,image/png,image/webp,application/pdf"
-                    />
-                    <label htmlFor="file" className="cursor-pointer">
-                      <Upload className="w-12 h-12 mx-auto mb-2 text-muted-foreground" />
-                      <p className="text-sm font-medium mb-1">Click to upload</p>
-                      <p className="text-xs text-muted-foreground">
-                        Images (JPG, PNG, WEBP) or PDF (Max 5MB)
-                      </p>
-                    </label>
-                  </div>
-                ) : (
-                  <div className="border border-border rounded-lg p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Upload className="w-5 h-5 text-primary" />
-                      <div>
-                        <p className="text-sm font-medium">{file.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {(file.size / 1024).toFixed(2)} KB
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={removeFile}
-                      className="h-8 w-8 p-0"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                )}
+                <Label>Attachments (Optional)</Label>
+                <MultiFileUpload 
+                  files={files}
+                  onChange={handleFilesChange}
+                  maxFiles={5}
+                  maxFileSize={10}
+                  maxTotalSize={50}
+                />
               </div>
 
               <div className="flex gap-4">
