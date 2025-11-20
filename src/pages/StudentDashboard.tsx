@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,7 @@ import { ProfileCompletionDialog } from "@/components/ProfileCompletionDialog";
 import { ProfileEditDialog } from "@/components/ProfileEditDialog";
 import LiveChatButton from "@/components/chat/LiveChatButton";
 import { SatisfactionRating } from "@/components/SatisfactionRating";
+import { useBroadcastSync, BroadcastMessage } from "@/hooks/useBroadcastSync";
 
 interface Complaint {
   id: string;
@@ -46,7 +47,7 @@ const StudentDashboard = () => {
   const [profileKey, setProfileKey] = useState(0);
   const [ratingComplaintId, setRatingComplaintId] = useState<string | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!user) {
       setDataLoading(false);
       return;
@@ -107,9 +108,22 @@ const StudentDashboard = () => {
     } finally {
       setDataLoading(false);
     }
-  };
+  }, [user, toast]);
+
+  // BroadcastChannel for multi-tab sync
+  const handleBroadcastMessage = useCallback((message: BroadcastMessage) => {
+    console.log('Student dashboard received broadcast:', message);
+    
+    if (message.type === 'new_complaint' || message.type === 'complaint_update' || message.type === 'status_change') {
+      // Refresh data when complaints change
+      fetchData();
+    }
+  }, [fetchData]);
+
+  const { broadcast } = useBroadcastSync('brotofix-student', handleBroadcastMessage);
 
   useEffect(() => {
+    fetchData();
 
     // Show Fixo Bro greeting on first login (check localStorage)
     const hasSeenGreeting = localStorage.getItem('fixobro_greeting_shown');
@@ -134,10 +148,12 @@ const StudentDashboard = () => {
         (payload) => {
           if (payload.eventType === "INSERT") {
             setComplaints((prev) => [payload.new as Complaint, ...prev]);
+            broadcast({ type: 'new_complaint', payload: payload.new });
           } else if (payload.eventType === "UPDATE") {
             setComplaints((prev) =>
               prev.map((c) => (c.id === payload.new.id ? (payload.new as Complaint) : c))
             );
+            broadcast({ type: 'complaint_update', payload: payload.new });
           } else if (payload.eventType === "DELETE") {
             setComplaints((prev) => prev.filter((c) => c.id !== payload.old.id));
           }
@@ -148,7 +164,7 @@ const StudentDashboard = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, toast]);
+  }, [user, toast, fetchData, broadcast]);
 
   const handleLogout = async () => {
     await signOut();

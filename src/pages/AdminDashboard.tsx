@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificationBell } from "@/components/NotificationBell";
 import { PendingAdmins } from "@/components/PendingAdmins";
 import AdminChatQueue from "@/components/chat/AdminChatQueue";
+import { useBroadcastSync, BroadcastMessage } from "@/hooks/useBroadcastSync";
 
 interface ComplaintWithStudent {
   id: string;
@@ -39,8 +40,7 @@ const AdminDashboard = () => {
   const [complaints, setComplaints] = useState<ComplaintWithStudent[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchComplaints = async () => {
+  const fetchComplaints = useCallback(async () => {
       // Fetch all complaints
       const { data: complaintsData, error: complaintsError } = await supabase
         .from("complaints")
@@ -83,8 +83,21 @@ const AdminDashboard = () => {
 
       setComplaints(formatted);
       setLoading(false);
-    };
+    }, [toast]);
 
+  // BroadcastChannel for multi-tab sync
+  const handleBroadcastMessage = useCallback((message: BroadcastMessage) => {
+    console.log('Admin dashboard received broadcast:', message);
+    
+    if (message.type === 'new_complaint' || message.type === 'complaint_update' || message.type === 'status_change') {
+      // Refresh data when complaints change
+      fetchComplaints();
+    }
+  }, [fetchComplaints]);
+
+  const { broadcast } = useBroadcastSync('brotofix-admin', handleBroadcastMessage);
+
+  useEffect(() => {
     fetchComplaints();
 
     // Set up real-time subscription
@@ -99,7 +112,9 @@ const AdminDashboard = () => {
         },
         async () => {
           // Refetch all data when any change happens
-          fetchComplaints();
+          await fetchComplaints();
+          // Broadcast to other tabs
+          broadcast({ type: 'complaint_update', payload: {} });
         }
       )
       .subscribe();
@@ -107,7 +122,7 @@ const AdminDashboard = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [toast]);
+  }, [toast, fetchComplaints, broadcast]);
 
   const handleLogout = async () => {
     await signOut();
