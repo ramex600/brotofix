@@ -99,33 +99,54 @@ export type Database = {
       complaints: {
         Row: {
           admin_notes: string | null
+          ai_category_suggestion: string | null
+          ai_confidence_score: number | null
+          ai_root_cause: string | null
+          ai_severity: string | null
+          ai_tags: string[] | null
           category: string
           created_at: string
           description: string
+          device_info: Json | null
           file_path: string | null
           id: string
+          screenshot_analysis: Json | null
           status: string
           student_id: string
           updated_at: string
         }
         Insert: {
           admin_notes?: string | null
+          ai_category_suggestion?: string | null
+          ai_confidence_score?: number | null
+          ai_root_cause?: string | null
+          ai_severity?: string | null
+          ai_tags?: string[] | null
           category: string
           created_at?: string
           description: string
+          device_info?: Json | null
           file_path?: string | null
           id?: string
+          screenshot_analysis?: Json | null
           status?: string
           student_id: string
           updated_at?: string
         }
         Update: {
           admin_notes?: string | null
+          ai_category_suggestion?: string | null
+          ai_confidence_score?: number | null
+          ai_root_cause?: string | null
+          ai_severity?: string | null
+          ai_tags?: string[] | null
           category?: string
           created_at?: string
           description?: string
+          device_info?: Json | null
           file_path?: string | null
           id?: string
+          screenshot_analysis?: Json | null
           status?: string
           student_id?: string
           updated_at?: string
