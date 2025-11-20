@@ -15,6 +15,7 @@ import brototypelogo from "@/assets/brototype-logo.jpg";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useChatSession } from "@/hooks/useChatSession";
 import ChatWindow from "@/components/chat/ChatWindow";
+import { ComplaintTimeline } from "@/components/ComplaintTimeline";
 
 const updateSchema = z.object({
   status: z.enum(["pending", "in-progress", "resolved"]),
@@ -26,11 +27,11 @@ interface ComplaintDetails {
   category: string;
   description: string;
   status: "pending" | "in-progress" | "resolved";
-  file_path: string | null;
+  file_paths: string[] | null;
   admin_notes: string | null;
   created_at: string;
   updated_at: string;
-  student_id: string; // UUID
+  student_id: string;
   student_name: string;
   student_id_display: string;
   course: string;
@@ -84,7 +85,7 @@ const AdminComplaintView = () => {
         category: data.category,
         description: data.description,
         status: data.status as "pending" | "in-progress" | "resolved",
-        file_path: data.file_path,
+        file_paths: data.file_paths,
         admin_notes: data.admin_notes,
         created_at: data.created_at,
         updated_at: data.updated_at,
@@ -347,16 +348,24 @@ const AdminComplaintView = () => {
                 <p className="mt-2 p-4 bg-muted rounded-lg">{complaint.description}</p>
               </div>
 
-              {complaint.file_path && (
+              {complaint.file_paths && complaint.file_paths.length > 0 && (
                 <div>
-                  <Label className="text-sm text-muted-foreground mb-2 block">Attachment</Label>
-                  <Button
-                    variant="outline"
-                    onClick={() => handleDownloadFile(complaint.file_path!)}
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    Download Attachment
-                  </Button>
+                  <Label className="text-sm text-muted-foreground mb-2 block">
+                    Attachments ({complaint.file_paths.length})
+                  </Label>
+                  <div className="space-y-2">
+                    {complaint.file_paths.map((filePath, index) => (
+                      <Button
+                        key={index}
+                        variant="outline"
+                        onClick={() => handleDownloadFile(filePath)}
+                        className="w-full justify-start"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Attachment {index + 1}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -370,7 +379,65 @@ const AdminComplaintView = () => {
                 Update the status and add resolution notes for this complaint
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent>
+              <form onSubmit={handleUpdate} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status</Label>
+                  <Select value={status} onValueChange={setStatus}>
+                    <SelectTrigger id="status">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="in-progress">In Progress</SelectItem>
+                      <SelectItem value="resolved">Resolved</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="admin_notes">Resolution Notes</Label>
+                  <Textarea
+                    id="admin_notes"
+                    placeholder="Add notes about actions taken or resolution details..."
+                    value={adminNotes}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    rows={6}
+                    maxLength={2000}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {adminNotes.length}/2000 characters
+                  </p>
+                </div>
+
+                <Button type="submit" disabled={saving} className="w-full">
+                  <Save className="w-4 h-4 mr-2" />
+                  {saving ? "Saving..." : "Update Complaint"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Timeline */}
+          <ComplaintTimeline complaintId={id!} />
+        </div>
+      </main>
+
+      {/* Live Chat Window */}
+      {showChat && activeSession && (
+        <ChatWindow
+          sessionId={activeSession.id}
+          userId={user?.id || ''}
+          userRole="admin"
+          studentId={complaint.student_id}
+          onClose={() => setShowChat(false)}
+        />
+      )}
+    </div>
+  );
+};
+
+export default AdminComplaintView;
               <div className="space-y-2">
                 <Label htmlFor="status">Status *</Label>
                 <Select value={status} onValueChange={setStatus}>

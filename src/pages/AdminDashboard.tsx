@@ -20,7 +20,7 @@ interface ComplaintWithStudent {
   category: string;
   description: string;
   status: "pending" | "in-progress" | "resolved";
-  file_path: string | null;
+  file_paths: string[] | null;
   admin_notes: string | null;
   created_at: string;
   updated_at: string;
@@ -71,7 +71,7 @@ const AdminDashboard = () => {
           category: c.category,
           description: c.description,
           status: c.status as "pending" | "in-progress" | "resolved",
-          file_path: c.file_path,
+          file_paths: c.file_paths,
           admin_notes: c.admin_notes,
           created_at: c.created_at,
           updated_at: c.updated_at,
@@ -322,10 +322,10 @@ const AdminDashboard = () => {
                               {complaint.category}
                             </Badge>
                             {getStatusBadge(complaint.status)}
-                            {complaint.file_path && (
+                            {complaint.file_paths && complaint.file_paths.length > 0 && (
                               <Badge variant="outline" className="text-xs">
                                 <Download className="w-3 h-3 mr-1" />
-                                File
+                                {complaint.file_paths.length} File{complaint.file_paths.length > 1 ? 's' : ''}
                               </Badge>
                             )}
                           </div>
@@ -401,10 +401,10 @@ const AdminDashboard = () => {
                               {complaint.category}
                             </Badge>
                             {getStatusBadge(complaint.status)}
-                            {complaint.file_path && (
+                            {complaint.file_paths && complaint.file_paths.length > 0 && (
                               <Badge variant="outline" className="text-xs">
                                 <Download className="w-3 h-3 mr-1" />
-                                File
+                                {complaint.file_paths.length} File{complaint.file_paths.length > 1 ? 's' : ''}
                               </Badge>
                             )}
                           </div>
