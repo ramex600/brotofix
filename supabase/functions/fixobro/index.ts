@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, userId } = await req.json();
+    const { message, userId, mode = 'chat' } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
     if (!LOVABLE_API_KEY) {
@@ -24,10 +24,77 @@ serve(async (req) => {
       );
     }
 
-    console.log('Fixo Bro request from user:', userId);
+    console.log('Fixo Bro request from user:', userId, 'Mode:', mode);
 
-    // System prompt for Fixo Bro personality and behavior
-    const systemPrompt = `You are Fixo Bro, a friendly technical support assistant for Brototype students. Your role:
+    // Different system prompts based on mode
+    let systemPrompt = '';
+    let requestBody: any = {};
+
+    if (mode === 'analyze_complaint') {
+      // Complaint intelligence mode - structured output
+      systemPrompt = `You are an expert technical analyst. Analyze the complaint and provide structured output:
+1. Identify the most appropriate category (Classroom/Mentor/Environment/Misc)
+2. Determine the root cause of the issue
+3. Assess severity (low/medium/high/critical)
+4. Generate relevant tags
+5. Provide confidence score
+
+Be precise and technical.`;
+
+      requestBody = {
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: message }
+        ],
+        tools: [
+          {
+            type: 'function',
+            function: {
+              name: 'analyze_complaint',
+              description: 'Analyze complaint and return structured intelligence',
+              parameters: {
+                type: 'object',
+                properties: {
+                  category: {
+                    type: 'string',
+                    enum: ['Classroom', 'Mentor', 'Environment', 'Misc'],
+                    description: 'Most appropriate complaint category'
+                  },
+                  rootCause: {
+                    type: 'string',
+                    description: 'Identified root cause of the issue'
+                  },
+                  severity: {
+                    type: 'string',
+                    enum: ['low', 'medium', 'high', 'critical'],
+                    description: 'Assessed severity level'
+                  },
+                  tags: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Relevant tags (3-5 tags)'
+                  },
+                  confidence: {
+                    type: 'number',
+                    description: 'Confidence score between 0 and 1'
+                  },
+                  suggestedFixes: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Suggested solutions (2-3 fixes)'
+                  }
+                },
+                required: ['category', 'rootCause', 'severity', 'tags', 'confidence', 'suggestedFixes']
+              }
+            }
+          }
+        ],
+        tool_choice: { type: 'function', function: { name: 'analyze_complaint' } }
+      };
+    } else {
+      // Default chat mode
+      systemPrompt = `You are Fixo Bro, a friendly technical support assistant for Brototype students. Your role:
 
 1. Help students diagnose device-related issues:
    - Laptop not turning on
@@ -54,6 +121,17 @@ serve(async (req) => {
 
 Remember: You are Fixo Bro, the tech support buddy!`;
 
+      requestBody = {
+        model: 'google/gemini-2.5-flash-lite',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: message }
+        ],
+        max_tokens: 200,
+        temperature: 0.7,
+      };
+    }
+
     const response = await fetch(
       'https://ai.gateway.lovable.dev/v1/chat/completions',
       {
@@ -62,15 +140,7 @@ Remember: You are Fixo Bro, the tech support buddy!`;
           'Authorization': `Bearer ${LOVABLE_API_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash-lite',
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: message }
-          ],
-          max_tokens: 200,
-          temperature: 0.7,
-        }),
+        body: JSON.stringify(requestBody),
       }
     );
 
@@ -99,6 +169,21 @@ Remember: You are Fixo Bro, the tech support buddy!`;
     }
 
     const data = await response.json();
+    
+    if (mode === 'analyze_complaint') {
+      // Extract structured tool call response
+      const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+      if (toolCall && toolCall.function?.arguments) {
+        const analysis = JSON.parse(toolCall.function.arguments);
+        console.log('Complaint analysis generated successfully');
+        return new Response(
+          JSON.stringify({ analysis }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // Default chat response
     const fixoBroResponse = data.choices?.[0]?.message?.content || 
       "Sorry, I couldn't process that. Can you try asking again?";
 

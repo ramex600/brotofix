@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -7,13 +7,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Upload, X } from "lucide-react";
+import { ArrowLeft, Upload, X, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import brototypelogo from "@/assets/brototype-logo.jpg";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { FixoBro } from "@/components/FixoBro";
+import { detectDeviceInfo, type DeviceInfo } from "@/utils/deviceDetection";
+import { AIAnalysisCard } from "@/components/AIAnalysisCard";
+import { ScreenshotAnalysisCard } from "@/components/ScreenshotAnalysisCard";
 
 const complaintSchema = z.object({
   category: z.enum(["Classroom", "Mentor", "Environment", "Misc"]),
@@ -29,6 +32,107 @@ const NewComplaint = () => {
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  
+  // Device info
+  const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
+  
+  // AI Analysis states
+  const [aiAnalysis, setAiAnalysis] = useState<any>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [screenshotAnalysis, setScreenshotAnalysis] = useState<any>(null);
+  const [isAnalyzingScreenshot, setIsAnalyzingScreenshot] = useState(false);
+
+  // Detect device info on mount
+  useEffect(() => {
+    const detectDevice = async () => {
+      const info = await detectDeviceInfo();
+      setDeviceInfo(info);
+      console.log('Device info detected:', info);
+    };
+    detectDevice();
+  }, []);
+
+  // Debounced AI analysis
+  useEffect(() => {
+    if (description.length < 20) {
+      setAiAnalysis(null);
+      return;
+    }
+
+    const timeoutId = setTimeout(async () => {
+      setIsAnalyzing(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('fixobro', {
+          body: {
+            message: description,
+            userId: user?.id,
+            mode: 'analyze_complaint'
+          }
+        });
+
+        if (error) throw error;
+        if (data?.analysis) {
+          setAiAnalysis(data.analysis);
+          console.log('AI Analysis:', data.analysis);
+        }
+      } catch (error) {
+        console.error('AI analysis error:', error);
+      } finally {
+        setIsAnalyzing(false);
+      }
+    }, 1500); // Analyze after 1.5s of no typing
+
+    return () => clearTimeout(timeoutId);
+  }, [description, user?.id]);
+
+  // Screenshot analysis
+  const analyzeScreenshot = useCallback(async (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+
+    setIsAnalyzingScreenshot(true);
+    try {
+      // Convert to base64
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      
+      await new Promise((resolve, reject) => {
+        reader.onload = resolve;
+        reader.onerror = reject;
+      });
+
+      const base64 = (reader.result as string).split(',')[1];
+      
+      const { data, error } = await supabase.functions.invoke('analyze-screenshot', {
+        body: {
+          imageBase64: base64,
+          imageMimeType: file.type
+        }
+      });
+
+      if (error) throw error;
+      if (data?.analysis) {
+        setScreenshotAnalysis(data.analysis);
+        console.log('Screenshot Analysis:', data.analysis);
+        
+        // Auto-append analysis to description
+        if (data.analysis.rawAnalysis) {
+          setDescription(prev => {
+            const addition = `\n\n[Auto-Detected from Screenshot]\n${data.analysis.rawAnalysis}`;
+            return prev + addition;
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Screenshot analysis error:', error);
+      toast({
+        variant: "destructive",
+        title: "Analysis Failed",
+        description: "Could not analyze screenshot, but you can still submit the complaint.",
+      });
+    } finally {
+      setIsAnalyzingScreenshot(false);
+    }
+  }, [toast]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -56,11 +160,27 @@ const NewComplaint = () => {
       }
 
       setFile(selectedFile);
+      
+      // Analyze screenshot if it's an image
+      if (selectedFile.type.startsWith('image/')) {
+        analyzeScreenshot(selectedFile);
+      }
     }
   };
 
   const removeFile = () => {
     setFile(null);
+    setScreenshotAnalysis(null);
+  };
+
+  const handleAcceptCategory = () => {
+    if (aiAnalysis?.category) {
+      setCategory(aiAnalysis.category);
+      toast({
+        title: "Category Applied",
+        description: `Set to ${aiAnalysis.category}`,
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -128,13 +248,24 @@ const NewComplaint = () => {
         filePath = fileName;
       }
 
-      // Insert complaint
-      const { error: insertError } = await supabase.from("complaints").insert({
+      // Insert complaint with AI data and device info
+      const complaintData: any = {
         student_id: user.id,
         category: validated.category,
         description: validated.description,
         file_path: filePath,
-      });
+        device_info: deviceInfo,
+        ai_category_suggestion: aiAnalysis?.category,
+        ai_root_cause: aiAnalysis?.rootCause,
+        ai_severity: aiAnalysis?.severity,
+        ai_tags: aiAnalysis?.tags,
+        ai_confidence_score: aiAnalysis?.confidence,
+        screenshot_analysis: screenshotAnalysis,
+      };
+
+      const { error: insertError } = await supabase
+        .from("complaints")
+        .insert(complaintData);
 
       if (insertError) {
         // If complaint insert fails, delete uploaded file
@@ -210,6 +341,33 @@ const NewComplaint = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* AI Analysis Card */}
+              {isAnalyzing && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>AI is analyzing your complaint...</span>
+                </div>
+              )}
+              
+              {aiAnalysis && (
+                <AIAnalysisCard 
+                  analysis={aiAnalysis} 
+                  onAcceptCategory={handleAcceptCategory}
+                />
+              )}
+
+              {/* Screenshot Analysis Card */}
+              {isAnalyzingScreenshot && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Analyzing screenshot...</span>
+                </div>
+              )}
+              
+              {screenshotAnalysis && (
+                <ScreenshotAnalysisCard analysis={screenshotAnalysis} />
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="category">Category *</Label>
                 <Select value={category} onValueChange={setCategory} required>
