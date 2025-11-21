@@ -119,11 +119,9 @@ export const useChatMessages = (sessionId: string | undefined, userId: string | 
 
       if (uploadError) throw uploadError;
 
-      const { data: urlData } = supabase.storage
-        .from('complaint-files')
-        .getPublicUrl(fileName);
-
-      return urlData.publicUrl;
+      // Store just the file path, not the full URL
+      // The MessageBubble component will generate signed URLs for secure access
+      return fileName;
     } catch (error: any) {
       console.error('Error uploading file:', error);
       toast({
