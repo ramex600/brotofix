@@ -302,70 +302,35 @@ const StudentDashboard = () => {
         <main className="flex-1 overflow-auto bg-background">
           <div className="p-4">
             <SidebarTrigger />
-      {/* Satisfaction Rating Dialog */}
-      {ratingComplaintId && (
-        <SatisfactionRating
-          complaintId={ratingComplaintId}
-          isOpen={!!ratingComplaintId}
-          onClose={() => setRatingComplaintId(null)}
-          onRated={() => {
-            setRatingComplaintId(null);
-            fetchData();
-          }}
-        />
-      )}
-      
-      {/* Profile Completion Dialog */}
-      {user && (
-        <ProfileCompletionDialog
-          key={profileKey}
-          userId={user.id}
-          currentProfile={profile}
-          onComplete={handleProfileComplete}
-        />
-      )}
-      
-      {/* Header */}
-      <header className="border-b border-border/50 bg-card/30 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <img
-              src={brototypelogo}
-              alt="Brototype Logo"
-              className="w-12 h-12 rounded-full object-contain"
-            />
-            <div>
-              <h1 className="text-xl font-bold">Student Portal</h1>
-              <p className="text-sm text-muted-foreground">
-                {profile ? `${profile.name} - ${profile.student_id}` : "Loading..."}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {profile && user && (
-              <ProfileEditDialog
-                userId={user.id}
-                currentProfile={profile}
-                onUpdate={handleProfileComplete}
+            
+            {/* Satisfaction Rating Dialog */}
+            {ratingComplaintId && (
+              <SatisfactionRating
+                complaintId={ratingComplaintId}
+                isOpen={!!ratingComplaintId}
+                onClose={() => setRatingComplaintId(null)}
+                onRated={() => {
+                  setRatingComplaintId(null);
+                  fetchData();
+                }}
               />
             )}
-            <NotificationBell userId={user?.id} userRole="student" />
-            <ThemeToggle />
-            <Button variant="outline" onClick={handleLogout}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold mb-2">
-            Welcome back, {profile?.name.split(" ")[0] || "Student"}! 👋
-          </h2>
+            
+            {/* Profile Completion Dialog */}
+            {user && (
+              <ProfileCompletionDialog
+                key={profileKey}
+                userId={user.id}
+                currentProfile={profile}
+                onComplete={handleProfileComplete}
+              />
+            )}
+            
+            {/* Welcome Section */}
+            <div className="mb-8">
+              <h2 className="text-3xl font-bold mb-2">
+                Welcome back, {profile?.name.split(" ")[0] || "Student"}! 👋
+              </h2>
           <p className="text-muted-foreground mb-6">
             Track your complaints and get updates from the admin team
           </p>
@@ -515,47 +480,23 @@ const StudentDashboard = () => {
               ))}
             </div>
           )}
-        </div>
-      </main>
-
-      {/* Fixo Bro AI Assistant */}
-      <FixoBro />
-      
-      {/* Fixo Bro Greeting Popup */}
-      {showFixoGreeting && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-fade-in">
-          <Card className="w-[90vw] md:w-96 shadow-2xl border-2 border-destructive/20 animate-scale-in">
-            <CardHeader className="bg-destructive text-destructive-foreground">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-background flex items-center justify-center">
-                  <span className="text-2xl">🤖</span>
-                </div>
-                <div>
-                  <CardTitle>Meet Fixo Bro!</CardTitle>
-                  <CardDescription className="text-destructive-foreground/80">
-                    Your Tech Support Assistant
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="pt-6 pb-4">
-              <p className="mb-4 text-muted-foreground">
-                Hey, I'm Fixo Bro 👋. Having device issues? Just click the red button at the bottom right, and I'll help you troubleshoot!
-              </p>
-              <Button 
-                onClick={() => setShowFixoGreeting(false)}
-                className="w-full"
-              >
-                Got it, thanks!
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Live Chat Button */}
-      <LiveChatButton />
-    </div>
+            </div>
+          </div>
+        </main>
+        
+        {profile && (
+          <ProfileEditDialog
+            userId={user!.id}
+            currentProfile={profile}
+            onUpdate={handleProfileComplete}
+            open={showEditProfile}
+            onOpenChange={setShowEditProfile}
+          />
+        )}
+        
+        <FixoBro />
+      </div>
+    </SidebarProvider>
   );
 };
 

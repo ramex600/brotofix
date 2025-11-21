@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { PendingAdmins } from "@/components/PendingAdmins";
+import AdminChatQueue from "@/components/chat/AdminChatQueue";
 import { useBroadcastSync, BroadcastMessage } from "@/hooks/useBroadcastSync";
 
 interface ComplaintWithStudent {
@@ -195,34 +196,16 @@ const AdminDashboard = () => {
         <main className="flex-1 overflow-auto bg-background">
           <div className="p-4">
             <SidebarTrigger />
-      {/* Header */}
-      <header className="border-b border-border/50 bg-card/30 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <img
-              src={brototypelogo}
-              alt="Brototype Logo"
-              className="w-12 h-12 rounded-full object-contain"
-            />
-            <div>
-              <h1 className="text-xl font-bold">Admin Portal</h1>
-              <p className="text-sm text-muted-foreground">Manage all complaints</p>
+            
+            {/* Pending Admin Approvals */}
+            <div className="mb-8">
+              <PendingAdmins />
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <NotificationBell userId={user?.id} userRole="admin" />
-            <ThemeToggle />
-            <Button variant="outline" onClick={handleLogout}>
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
-          </div>
-        </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        {/* Pending Admin Approvals */}
+            {/* Live Chat Queue */}
+            <AdminChatQueue />
+
+            {/* Stats */}
         <div className="mb-8">
           <PendingAdmins />
         </div>
@@ -460,10 +443,12 @@ const AdminDashboard = () => {
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
-      </main>
-    </div>
+              </CardContent>
+            </Card>
+          </div>
+        </main>
+      </div>
+    </SidebarProvider>
   );
 };
 
