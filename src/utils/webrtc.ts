@@ -62,6 +62,14 @@ export class RTCPeerConnectionManager {
       }
     };
 
+    this.pc.oniceconnectionstatechange = () => {
+      console.log('ICE connection state:', this.pc?.iceConnectionState);
+      if (this.pc?.iceConnectionState === 'failed') {
+        console.log('ICE connection failed, attempting restart');
+        this.pc.restartIce();
+      }
+    };
+
     // Subscribe to WebRTC signals
     await this.subscribeToSignals();
   }
@@ -100,32 +108,52 @@ export class RTCPeerConnectionManager {
   async startScreenShare() {
     try {
       console.log('Starting screen share');
+      
+      // Check if screen sharing is supported
+      if (!navigator.mediaDevices?.getDisplayMedia) {
+        throw new Error('Screen sharing is not supported on this device');
+      }
+      
       const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: {
-          displaySurface: 'monitor',
-        },
+        video: true,  // Simplified for mobile compatibility
         audio: true,
       });
 
       this.localStream = stream;
 
-      // Add tracks to peer connection
-      if (this.pc) {
+      // Only add tracks if peer connection is ready and not closed
+      if (this.pc && this.pc.connectionState !== 'closed') {
+        const senders = this.pc.getSenders();
         stream.getTracks().forEach((track) => {
-          this.pc!.addTrack(track, stream);
+          const sender = senders.find(s => s.track?.kind === track.kind);
+          if (sender) {
+            sender.replaceTrack(track);  // Replace existing track
+          } else {
+            this.pc!.addTrack(track, stream);  // Add new track
+          }
         });
       }
 
       // Handle screen share stop
       stream.getVideoTracks()[0].onended = () => {
-        console.log('Screen share stopped');
+        console.log('Screen share stopped by user');
         this.stopScreenShare();
       };
 
       return stream;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error starting screen share:', error);
-      throw error;
+      
+      // Provide user-friendly error messages
+      if (error.name === 'NotAllowedError') {
+        throw new Error('Screen sharing permission denied');
+      } else if (error.name === 'NotSupportedError') {
+        throw new Error('Screen sharing is not supported on this browser');
+      } else if (error.message && error.message.includes('not supported')) {
+        throw error;  // Pass through our custom messages
+      }
+      
+      throw new Error('Failed to start screen sharing');
     }
   }
 
@@ -180,6 +208,21 @@ export class RTCPeerConnectionManager {
   async createOffer() {
     if (!this.pc) {
       throw new Error('Peer connection not initialized');
+    }
+
+    // Wait for connection to be in stable state
+    if (this.pc.signalingState !== 'stable') {
+      console.log('Waiting for stable state before creating offer, current state:', this.pc.signalingState);
+      await new Promise<void>(resolve => {
+        const checkState = () => {
+          if (this.pc?.signalingState === 'stable') {
+            resolve();
+          } else {
+            setTimeout(checkState, 100);
+          }
+        };
+        checkState();
+      });
     }
 
     console.log('Creating offer');

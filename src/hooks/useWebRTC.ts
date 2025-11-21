@@ -70,7 +70,17 @@ export const useWebRTC = (
     if (!rtcManagerRef.current) {
       toast({
         title: 'Error',
-        description: 'WebRTC not initialized',
+        description: 'Connection not ready. Please wait...',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Check if browser supports screen sharing
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      toast({
+        title: 'Not Supported',
+        description: 'Screen sharing is not supported on this device',
         variant: 'destructive',
       });
       return;
@@ -81,22 +91,38 @@ export const useWebRTC = (
       setLocalStream(stream);
       setIsScreenSharing(true);
       
+      // Wait a bit before creating offer to ensure tracks are added
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       // Create offer after starting screen share
       if (isInitiator) {
-        await rtcManagerRef.current.createOffer();
+        try {
+          await rtcManagerRef.current.createOffer();
+        } catch (offerError) {
+          console.error('Error creating offer:', offerError);
+          toast({
+            title: 'Connection Error',
+            description: 'Failed to establish connection. Please try again.',
+            variant: 'destructive',
+          });
+        }
       }
 
       toast({
-        title: 'Screen Sharing',
+        title: 'Screen Sharing Active',
         description: 'Your screen is now being shared',
       });
     } catch (error: any) {
       console.error('Error starting screen share:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to start screen sharing',
-        variant: 'destructive',
-      });
+      
+      // Don't show error toast if user cancelled
+      if (error.message !== 'Screen sharing permission denied') {
+        toast({
+          title: 'Screen Share Failed',
+          description: error.message || 'Failed to start screen sharing',
+          variant: 'destructive',
+        });
+      }
     }
   };
 

@@ -108,4 +108,23 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Touch device optimizations */
+  @media (hover: none) and (pointer: coarse) {
+    * {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    
+    button, a, input, textarea {
+      touch-action: manipulation;
+    }
+  }
+  
+  /* Prevent zoom on input focus for mobile Safari */
+  @supports (-webkit-touch-callout: none) {
+    input, textarea, select {
+      font-size: 16px;
+    }
+  }
 }
