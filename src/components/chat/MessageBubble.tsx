@@ -25,6 +25,7 @@ export const MessageBubble = ({
 }: MessageBubbleProps) => {
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
   const [isImage, setIsImage] = useState(false);
+  const [isVideo, setIsVideo] = useState(false);
 
   useEffect(() => {
     if (messageType === 'file' && fileUrl) {
@@ -37,10 +38,15 @@ export const MessageBubble = ({
         filePath = urlParts[1];
       }
       
-      // Check if it's an image
+      // Check file type
       const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+      const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m4v'];
+      
       const isImageFile = imageExtensions.some(ext => filePath.toLowerCase().endsWith(ext));
+      const isVideoFile = videoExtensions.some(ext => filePath.toLowerCase().endsWith(ext));
+      
       setIsImage(isImageFile);
+      setIsVideo(isVideoFile);
       
       // Get signed URL for secure access
       supabase.storage
@@ -86,6 +92,25 @@ export const MessageBubble = ({
                   className="max-w-full max-h-64 rounded border border-border/50"
                   loading="lazy"
                 />
+                <a
+                  href={signedUrl}
+                  download
+                  className="flex items-center gap-2 text-xs underline hover:no-underline"
+                >
+                  <Download className="w-3 h-3" />
+                  {message}
+                </a>
+              </div>
+            ) : isVideo ? (
+              <div className="space-y-2">
+                <video
+                  controls
+                  className="max-w-full max-h-64 rounded border border-border/50"
+                  preload="metadata"
+                >
+                  <source src={signedUrl} />
+                  Your browser does not support the video tag.
+                </video>
                 <a
                   href={signedUrl}
                   download
