@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import brototypelogo from "@/assets/brototype-logo.jpg";
 
 interface AppSidebarProps {
@@ -104,6 +105,10 @@ export function AppSidebar({ userRole, userName, userCourse, onLogout, onEditPro
         )}
 
         <div className="space-y-2">
+          <div className={isCollapsed ? "flex justify-center mb-2" : "flex items-center gap-2 mb-2"}>
+            <ThemeToggle />
+            {!isCollapsed && <span className="text-sm text-muted-foreground">Theme</span>}
+          </div>
           {onEditProfile && (
             <Button
               variant="outline"
