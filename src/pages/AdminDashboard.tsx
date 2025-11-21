@@ -6,14 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { LogOut, Search, Eye, Clock, CheckCircle2, AlertCircle, Download } from "lucide-react";
+import { Search, Eye, Clock, CheckCircle2, AlertCircle, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import brototypelogo from "@/assets/brototype-logo.jpg";
 import { supabase } from "@/integrations/supabase/client";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { NotificationBell } from "@/components/NotificationBell";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
 import { PendingAdmins } from "@/components/PendingAdmins";
-import AdminChatQueue from "@/components/chat/AdminChatQueue";
 import { useBroadcastSync, BroadcastMessage } from "@/hooks/useBroadcastSync";
 
 interface ComplaintWithStudent {
@@ -187,7 +185,16 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full">
+        <AppSidebar
+          userRole="admin"
+          userName="Admin"
+          onLogout={handleLogout}
+        />
+        <main className="flex-1 overflow-auto bg-background">
+          <div className="p-4">
+            <SidebarTrigger />
       {/* Header */}
       <header className="border-b border-border/50 bg-card/30 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">

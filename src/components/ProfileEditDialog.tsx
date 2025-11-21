@@ -26,8 +26,15 @@ interface ProfileEditDialogProps {
   onUpdate: () => void;
 }
 
-export const ProfileEditDialog = ({ userId, currentProfile, onUpdate }: ProfileEditDialogProps) => {
-  const [open, setOpen] = useState(false);
+interface ControlledProfileEditDialogProps extends ProfileEditDialogProps {
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export const ProfileEditDialog = ({ userId, currentProfile, onUpdate, open: controlledOpen, onOpenChange }: ControlledProfileEditDialogProps) => {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = onOpenChange || setInternalOpen;
   const [name, setName] = useState(currentProfile.name);
   const [email, setEmail] = useState(currentProfile.email || "");
   const [studentId, setStudentId] = useState(currentProfile.student_id);

@@ -10,6 +10,8 @@ export interface ChatMessage {
   message_type: 'text' | 'system' | 'file';
   file_url: string | null;
   created_at: string;
+  read_at: string | null;
+  read_by: string | null;
 }
 
 export const useChatMessages = (sessionId: string | undefined, userId: string | undefined) => {

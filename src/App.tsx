@@ -12,6 +12,8 @@ import StudentDashboard from "./pages/StudentDashboard";
 import NewComplaint from "./pages/NewComplaint";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminComplaintView from "./pages/AdminComplaintView";
+import StudentChats from "./pages/StudentChats";
+import AdminChats from "./pages/AdminChats";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,11 +30,20 @@ const App = () => (
               <Route path="/" element={<Navigate to="/intro" replace />} />
               <Route path="/intro" element={<Intro />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/student" element={<Navigate to="/student/dashboard" replace />} />
               <Route
                 path="/student/dashboard"
                 element={
                   <ProtectedRoute allowedRole="student">
                     <StudentDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/student/chats"
+                element={
+                  <ProtectedRoute allowedRole="student">
+                    <StudentChats />
                   </ProtectedRoute>
                 }
               />
@@ -44,11 +55,20 @@ const App = () => (
                   </ProtectedRoute>
                 }
               />
+              <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
               <Route
                 path="/admin/dashboard"
                 element={
                   <ProtectedRoute allowedRole="admin">
                     <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin/chats"
+                element={
+                  <ProtectedRoute allowedRole="admin">
+                    <AdminChats />
                   </ProtectedRoute>
                 }
               />

@@ -88,7 +88,7 @@ export const useChatSession = (userId: string | undefined, userRole: 'student' |
     }
   };
 
-  const createSession = async (complaintId?: string) => {
+  const createSession = async (complaintId?: string, targetStudentId?: string) => {
     if (!userId) {
       toast({
         title: 'Error',
@@ -101,13 +101,23 @@ export const useChatSession = (userId: string | undefined, userRole: 'student' |
     setLoading(true);
 
     try {
+      // If admin is creating a session with a student
+      const sessionData = targetStudentId
+        ? {
+            student_id: targetStudentId,
+            admin_id: userId,
+            status: 'active' as const,
+            complaint_id: complaintId || null,
+          }
+        : {
+            student_id: userId,
+            status: 'waiting' as const,
+            complaint_id: complaintId || null,
+          };
+
       const { data, error } = await supabase
         .from('chat_sessions')
-        .insert({
-          student_id: userId,
-          status: 'waiting',
-          complaint_id: complaintId || null,
-        })
+        .insert(sessionData)
         .select()
         .single();
 
@@ -116,8 +126,10 @@ export const useChatSession = (userId: string | undefined, userRole: 'student' |
       setActiveSession(data);
       
       toast({
-        title: 'Chat Request Sent',
-        description: 'Waiting for an admin to join...',
+        title: targetStudentId ? 'Chat Started' : 'Chat Request Sent',
+        description: targetStudentId
+          ? 'Chat session created successfully'
+          : 'Waiting for an admin to join...',
       });
 
       return data;
