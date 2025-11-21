@@ -16,6 +16,8 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { useChatSession } from "@/hooks/useChatSession";
 import ChatWindow from "@/components/chat/ChatWindow";
 import { ComplaintTimeline } from "@/components/ComplaintTimeline";
+import { AIAnalysisCard } from "@/components/AIAnalysisCard";
+import { ScreenshotAnalysisCard } from "@/components/ScreenshotAnalysisCard";
 
 const updateSchema = z.object({
   status: z.enum(["pending", "in-progress", "resolved"]),
@@ -36,6 +38,12 @@ interface ComplaintDetails {
   student_id_display: string;
   course: string;
   student_email: string;
+  ai_category_suggestion: string | null;
+  ai_confidence_score: number | null;
+  ai_root_cause: string | null;
+  ai_severity: string | null;
+  ai_tags: string[] | null;
+  screenshot_analysis: any | null;
 }
 
 const AdminComplaintView = () => {
@@ -94,6 +102,12 @@ const AdminComplaintView = () => {
         student_id_display: profileData?.student_id || "N/A",
         course: profileData?.course || "N/A",
         student_email: profileData?.email || "N/A",
+        ai_category_suggestion: data.ai_category_suggestion,
+        ai_confidence_score: data.ai_confidence_score,
+        ai_root_cause: data.ai_root_cause,
+        ai_severity: data.ai_severity,
+        ai_tags: data.ai_tags,
+        screenshot_analysis: data.screenshot_analysis,
       };
 
       setComplaint(formatted);
@@ -370,6 +384,26 @@ const AdminComplaintView = () => {
               )}
             </CardContent>
           </Card>
+
+          {/* AI Analysis */}
+          {(complaint.ai_category_suggestion || complaint.ai_root_cause) && (
+            <AIAnalysisCard
+              analysis={{
+                category: complaint.ai_category_suggestion || undefined,
+                rootCause: complaint.ai_root_cause || undefined,
+                severity: complaint.ai_severity || undefined,
+                tags: complaint.ai_tags || undefined,
+                confidence: complaint.ai_confidence_score || undefined,
+              }}
+            />
+          )}
+
+          {/* Screenshot Analysis */}
+          {complaint.screenshot_analysis && (
+            <ScreenshotAnalysisCard
+              analysis={complaint.screenshot_analysis}
+            />
+          )}
 
           {/* Admin Actions */}
           <Card>
