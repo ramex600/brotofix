@@ -9,6 +9,8 @@ import { useChatMessages } from '@/hooks/useChatMessages';
 import { useChatSession, ChatSession } from '@/hooks/useChatSession';
 import { useWebRTC } from '@/hooks/useWebRTC';
 import { useAuth } from '@/hooks/useAuth';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 import ScreenShareDisplay from './ScreenShareDisplay';
 
 interface ChatWindowProps {
@@ -18,6 +20,7 @@ interface ChatWindowProps {
 
 const ChatWindow = ({ session, onClose }: ChatWindowProps) => {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
   const [message, setMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -77,7 +80,13 @@ const ChatWindow = ({ session, onClose }: ChatWindowProps) => {
   };
 
   return (
-    <Card className="fixed bottom-8 right-8 w-[400px] h-[600px] flex flex-col shadow-2xl z-50 bg-background border-border">
+    <Card className={cn(
+      "fixed flex flex-col shadow-2xl z-50 bg-background border-border rounded-lg",
+      // Mobile: full width with margins, max 80vh height
+      "bottom-4 left-4 right-4 max-h-[80vh]",
+      // Desktop: fixed size in bottom-right
+      "md:bottom-8 md:left-auto md:right-8 md:w-[400px] md:h-[600px]"
+    )}>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-2">
@@ -93,6 +102,13 @@ const ChatWindow = ({ session, onClose }: ChatWindowProps) => {
           <X className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* Mobile Warning for Screen Share */}
+      {isMobile && session.status === 'active' && (
+        <div className="px-4 py-2 bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 text-xs border-b border-border">
+          ⚠️ Screen sharing may not be available on mobile devices
+        </div>
+      )}
 
       {/* Screen Share Display */}
       {(localStream || remoteStream) && (
@@ -157,14 +173,14 @@ const ChatWindow = ({ session, onClose }: ChatWindowProps) => {
 
       {/* Controls */}
       <div className="p-4 border-t border-border space-y-2">
-        {/* WebRTC Controls */}
-        {session.status === 'active' && (
+        {/* WebRTC Controls - Hide screen share on mobile */}
+        {session.status === 'active' && !isMobile && (
           <div className="flex gap-2 mb-2">
             <Button
               size="sm"
               variant={isScreenSharing ? 'default' : 'outline'}
               onClick={isScreenSharing ? stopScreenShare : startScreenShare}
-              className="flex-1"
+              className="flex-1 min-h-[44px]"
             >
               <Monitor className="h-4 w-4 mr-2" />
               {isScreenSharing ? 'Stop Sharing' : 'Share Screen'}
@@ -173,8 +189,24 @@ const ChatWindow = ({ session, onClose }: ChatWindowProps) => {
               size="sm"
               variant={isAudioEnabled ? 'default' : 'outline'}
               onClick={toggleAudio}
+              className="min-h-[44px] min-w-[44px]"
             >
               {isAudioEnabled ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
+            </Button>
+          </div>
+        )}
+        
+        {/* Audio-only control on mobile */}
+        {session.status === 'active' && isMobile && (
+          <div className="flex gap-2 mb-2">
+            <Button
+              size="sm"
+              variant={isAudioEnabled ? 'default' : 'outline'}
+              onClick={toggleAudio}
+              className="flex-1 min-h-[44px]"
+            >
+              {isAudioEnabled ? <Mic className="h-4 w-4 mr-2" /> : <MicOff className="h-4 w-4 mr-2" />}
+              {isAudioEnabled ? 'Mute' : 'Unmute'}
             </Button>
           </div>
         )}
@@ -191,6 +223,7 @@ const ChatWindow = ({ session, onClose }: ChatWindowProps) => {
             size="icon"
             variant="outline"
             onClick={() => fileInputRef.current?.click()}
+            className="min-h-[44px] min-w-[44px]"
           >
             <Paperclip className="h-4 w-4" />
           </Button>
@@ -200,9 +233,13 @@ const ChatWindow = ({ session, onClose }: ChatWindowProps) => {
             onKeyPress={handleKeyPress}
             placeholder="Type a message..."
             disabled={sending}
-            className="flex-1"
+            className="flex-1 min-h-[44px] text-base"
           />
-          <Button onClick={handleSendMessage} disabled={sending || !message.trim()}>
+          <Button 
+            onClick={handleSendMessage} 
+            disabled={sending || !message.trim()}
+            className="min-h-[44px] min-w-[44px]"
+          >
             <Send className="h-4 w-4" />
           </Button>
         </div>
