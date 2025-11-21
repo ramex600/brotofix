@@ -231,7 +231,7 @@ export const ChatInterface = ({ userRole }: ChatInterfaceProps) => {
             {/* Controls */}
             <div className="p-4 border-t border-border space-y-2">
               {/* WebRTC Controls - Hide screen share on mobile */}
-              {currentSession?.status === 'active' && !isMobile && (
+              {selectedSessionId && !isMobile && (
                 <div className="flex gap-2 mb-2">
                   <Button
                     size="sm"
@@ -254,7 +254,7 @@ export const ChatInterface = ({ userRole }: ChatInterfaceProps) => {
               )}
               
               {/* Audio-only control on mobile */}
-              {currentSession?.status === 'active' && isMobile && (
+              {selectedSessionId && isMobile && (
                 <div className="flex gap-2 mb-2">
                   <Button
                     size="sm"
