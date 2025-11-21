@@ -4,16 +4,14 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, LogOut, FileText, Download, CheckCircle } from "lucide-react";
-import brototypelogo from "@/assets/brototype-logo.jpg";
+import { Plus, FileText, Download, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/AppSidebar";
 import { FixoBro } from "@/components/FixoBro";
-import { NotificationBell } from "@/components/NotificationBell";
 import { ProfileCompletionDialog } from "@/components/ProfileCompletionDialog";
 import { ProfileEditDialog } from "@/components/ProfileEditDialog";
-import LiveChatButton from "@/components/chat/LiveChatButton";
 import { SatisfactionRating } from "@/components/SatisfactionRating";
 import { useBroadcastSync, BroadcastMessage } from "@/hooks/useBroadcastSync";
 
@@ -46,6 +44,7 @@ const StudentDashboard = () => {
   const [showFixoGreeting, setShowFixoGreeting] = useState(false);
   const [profileKey, setProfileKey] = useState(0);
   const [ratingComplaintId, setRatingComplaintId] = useState<string | null>(null);
+  const [showEditProfile, setShowEditProfile] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!user) {
@@ -291,7 +290,18 @@ const StudentDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <SidebarProvider>
+      <div className="flex min-h-screen w-full">
+        <AppSidebar
+          userRole="student"
+          userName={profile?.name}
+          userCourse={profile?.course}
+          onLogout={handleLogout}
+          onEditProfile={() => setShowEditProfile(true)}
+        />
+        <main className="flex-1 overflow-auto bg-background">
+          <div className="p-4">
+            <SidebarTrigger />
       {/* Satisfaction Rating Dialog */}
       {ratingComplaintId && (
         <SatisfactionRating

@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useState, useEffect, useRef } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
+import { X } from "lucide-react";
 
 const profileSchema = z.object({
   email: z.string().email("Invalid email format").optional().or(z.literal("")),
@@ -29,11 +30,13 @@ export const ProfileCompletionDialog = ({ userId, currentProfile, onComplete }: 
   const [studentId, setStudentId] = useState("");
   const [course, setCourse] = useState("");
   const [saving, setSaving] = useState(false);
+  const [manuallyDismissed, setManuallyDismissed] = useState(false);
   const { toast } = useToast();
+  const firstInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Only check if profile data is loaded
-    if (!currentProfile) return;
+    if (!currentProfile || manuallyDismissed) return;
     
     // Check if profile needs completion
     const needsCompletion = !currentProfile.student_id || 
@@ -45,7 +48,8 @@ export const ProfileCompletionDialog = ({ userId, currentProfile, onComplete }: 
       // Check if user has dismissed this before
       const dismissed = localStorage.getItem(`profile_completion_dismissed_${userId}`);
       if (!dismissed) {
-        setOpen(true);
+        // Delay opening to prevent immediate re-opening loop
+        setTimeout(() => setOpen(true), 300);
       }
     }
 
@@ -53,10 +57,17 @@ export const ProfileCompletionDialog = ({ userId, currentProfile, onComplete }: 
     setEmail(currentProfile.email || "");
     setStudentId(currentProfile.student_id || "");
     setCourse(currentProfile.course || "");
-  }, [currentProfile, userId]);
+  }, [currentProfile, userId, manuallyDismissed]);
+
+  useEffect(() => {
+    if (open && firstInputRef.current) {
+      firstInputRef.current.focus();
+    }
+  }, [open]);
 
   const handleDismiss = () => {
     localStorage.setItem(`profile_completion_dismissed_${userId}`, 'true');
+    setManuallyDismissed(true);
     setOpen(false);
   };
 
@@ -109,8 +120,17 @@ export const ProfileCompletionDialog = ({ userId, currentProfile, onComplete }: 
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="sm:max-w-md">
+    <Dialog open={open} onOpenChange={(isOpen) => {
+      setOpen(isOpen);
+      if (!isOpen) {
+        setManuallyDismissed(true);
+      }
+    }}>
+      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground">
+          <X className="h-4 w-4" />
+          <span className="sr-only">Close</span>
+        </DialogClose>
         <DialogHeader>
           <DialogTitle>Complete Your Profile</DialogTitle>
           <DialogDescription>
@@ -122,11 +142,13 @@ export const ProfileCompletionDialog = ({ userId, currentProfile, onComplete }: 
           <div className="space-y-2">
             <Label htmlFor="student-id">Student ID *</Label>
             <Input
+              ref={firstInputRef}
               id="student-id"
               placeholder="e.g., BT2024001"
               value={studentId}
               onChange={(e) => setStudentId(e.target.value)}
               maxLength={50}
+              className="min-h-[44px] text-base"
             />
           </div>
 
@@ -138,6 +160,7 @@ export const ProfileCompletionDialog = ({ userId, currentProfile, onComplete }: 
               value={course}
               onChange={(e) => setCourse(e.target.value)}
               maxLength={100}
+              className="min-h-[44px] text-base"
             />
           </div>
 
@@ -150,15 +173,16 @@ export const ProfileCompletionDialog = ({ userId, currentProfile, onComplete }: 
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               maxLength={255}
+              className="min-h-[44px] text-base"
             />
           </div>
         </div>
 
         <div className="flex gap-3">
-          <Button onClick={handleSubmit} disabled={saving} className="flex-1">
+          <Button onClick={handleSubmit} disabled={saving} className="flex-1 min-h-[44px]">
             {saving ? "Saving..." : "Submit"}
           </Button>
-          <Button variant="outline" onClick={handleDismiss} disabled={saving}>
+          <Button variant="outline" onClick={handleDismiss} disabled={saving} className="min-h-[44px]">
             Dismiss
           </Button>
         </div>

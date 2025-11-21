@@ -21,6 +21,8 @@ export type Database = {
           id: string
           message: string
           message_type: Database["public"]["Enums"]["message_type"]
+          read_at: string | null
+          read_by: string | null
           sender_id: string
           session_id: string
         }
@@ -30,6 +32,8 @@ export type Database = {
           id?: string
           message: string
           message_type?: Database["public"]["Enums"]["message_type"]
+          read_at?: string | null
+          read_by?: string | null
           sender_id: string
           session_id: string
         }
@@ -39,6 +43,8 @@ export type Database = {
           id?: string
           message?: string
           message_type?: Database["public"]["Enums"]["message_type"]
+          read_at?: string | null
+          read_by?: string | null
           sender_id?: string
           session_id?: string
         }
@@ -59,6 +65,8 @@ export type Database = {
           created_at: string
           ended_at: string | null
           id: string
+          last_message: string | null
+          last_message_at: string | null
           started_at: string
           status: Database["public"]["Enums"]["chat_status"]
           student_id: string
@@ -70,6 +78,8 @@ export type Database = {
           created_at?: string
           ended_at?: string | null
           id?: string
+          last_message?: string | null
+          last_message_at?: string | null
           started_at?: string
           status?: Database["public"]["Enums"]["chat_status"]
           student_id: string
@@ -81,6 +91,8 @@ export type Database = {
           created_at?: string
           ended_at?: string | null
           id?: string
+          last_message?: string | null
+          last_message_at?: string | null
           started_at?: string
           status?: Database["public"]["Enums"]["chat_status"]
           student_id?: string
